@@ -42,9 +42,9 @@ testable before moving to the next. Checked items are done.
 ### Phase 1 — Core interception loop
 - [x] 1. Basic interceptor: logs a shell command, then runs it
 - [x] 2. Risk classifier v1 — pattern-based LOW / MEDIUM / HIGH
-- [ ] 3. Extend interception to file operations (create, write, delete, move)
-- [ ] 4. Extend risk classification to git operations specifically
-- [ ] 5. SQLite logging layer — every action persisted, not just printed
+- [x] 3. Extend interception to file operations (create, write, delete, move)
+- [x] 4. Extend risk classification to git operations specifically
+- [x] 5. SQLite logging layer — every action persisted, not just printed
 
 ### Phase 2 — Confirmation gate
 - [ ] 6. Pause on MEDIUM/HIGH tier and ask for approve/reject
