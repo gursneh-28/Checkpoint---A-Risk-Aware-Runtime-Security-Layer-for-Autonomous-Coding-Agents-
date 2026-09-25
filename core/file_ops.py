@@ -3,73 +3,56 @@ import shutil
 import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from storage.db import log_action
 from core.risk_classifier import classify_file_op
+from core.confirmation import resolve_action
 
 
 def intercept_create(path: str, content: str = ""):
-    action_desc = f"CREATE {path}"
     tier = classify_file_op("create", path)
-    print(f"[Checkpoint] {action_desc} — risk tier: {tier}")
 
-    if tier == "LOW":
+    def execute():
         with open(path, "w") as f:
             f.write(content)
-        log_action("file", action_desc, tier, "executed")
-        print("Executed.")
-    else:
-        log_action("file", action_desc, tier, "blocked")
-        print(f"Blocked — tier {tier} requires confirmation (not yet implemented).")
+        return f"created {path}"
+
+    resolve_action("file", f"CREATE {path}", tier, execute)
 
 
 def intercept_write(path: str, content: str):
-    action_desc = f"WRITE {path}"
     tier = classify_file_op("write", path)
-    print(f"[Checkpoint] {action_desc} — risk tier: {tier}")
 
-    if tier == "LOW":
+    def execute():
         with open(path, "a") as f:
             f.write(content)
-        log_action("file", action_desc, tier, "executed")
-        print("Executed.")
-    else:
-        log_action("file", action_desc, tier, "blocked")
-        print(f"Blocked — tier {tier} requires confirmation (not yet implemented).")
+        return f"wrote to {path}"
+
+    resolve_action("file", f"WRITE {path}", tier, execute)
 
 
 def intercept_delete(path: str):
-    action_desc = f"DELETE {path}"
     tier = classify_file_op("delete", path)
-    print(f"[Checkpoint] {action_desc} — risk tier: {tier}")
 
-    if tier == "LOW":
+    def execute():
         if os.path.isfile(path):
             os.remove(path)
         elif os.path.isdir(path):
             shutil.rmtree(path)
-        log_action("file", action_desc, tier, "executed")
-        print("Executed.")
-    else:
-        log_action("file", action_desc, tier, "blocked")
-        print(f"Blocked — tier {tier} requires confirmation (not yet implemented).")
+        return f"deleted {path}"
+
+    resolve_action("file", f"DELETE {path}", tier, execute)
 
 
 def intercept_move(src: str, dst: str):
-    action_desc = f"MOVE {src} -> {dst}"
     tier = classify_file_op("move", src)
-    print(f"[Checkpoint] {action_desc} — risk tier: {tier}")
 
-    if tier == "LOW":
+    def execute():
         shutil.move(src, dst)
-        log_action("file", action_desc, tier, "executed")
-        print("Executed.")
-    else:
-        log_action("file", action_desc, tier, "blocked")
-        print(f"Blocked — tier {tier} requires confirmation (not yet implemented).")
+        return f"moved {src} -> {dst}"
+
+    resolve_action("file", f"MOVE {src} -> {dst}", tier, execute)
 
 
 if __name__ == "__main__":
-    # Quick manual test
-    intercept_create("test_file.txt", "hello from checkpoint\n")
-    intercept_write("test_file.txt", "second line\n")
-    intercept_delete("test_file.txt")
+    intercept_create("test_file.txt", "hello from checkpoint\n")   # LOW -> auto
+    intercept_write("test_file.txt", "second line\n")               # LOW -> auto
+    intercept_delete("test_file.txt")                                # MEDIUM -> asks 
