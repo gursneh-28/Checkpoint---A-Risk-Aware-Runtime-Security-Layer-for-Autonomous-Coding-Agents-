@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="5">
+    <title>Checkpoint — Activity Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+            background: #f5f7fa;
+            color: #1a1a1a;
+            margin: 0;
+            padding: 40px;
+        }
+        h1 {
+            color: #1F4E79;
+            margin-bottom: 4px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 28px;
+            font-size: 15px;
+        }
+        .refresh-note {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        th {
+            background: #1F4E79;
+            color: white;
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 14px;
+        }
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+            vertical-align: top;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background: #fafbfc; }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12.5px;
+            font-weight: 600;
+        }
+        .risk-LOW { background: #E7F6E7; color: #2E7D32; }
+        .risk-MEDIUM { background: #FFF6DC; color: #8a6d00; }
+        .risk-HIGH { background: #FBE4E4; color: #B00020; }
+
+        .status-executed { background: #E7F6E7; color: #2E7D32; }
+        .status-blocked { background: #FBE4E4; color: #B00020; }
+        .status-rejected { background: #FBE4E4; color: #B00020; }
+        .status-pending { background: #FFF0DA; color: #B5651D; }
+        .status-approved { background: #E7F6E7; color: #2E7D32; }
+
+        .action-buttons a {
+            display: inline-block;
+            padding: 5px 14px;
+            border-radius: 6px;
+            font-size: 12.5px;
+            font-weight: 600;
+            text-decoration: none;
+            margin-right: 6px;
+        }
+        .btn-approve { background: #2E7D32; color: white; }
+        .btn-reject { background: #B00020; color: white; }
+
+        .command-cell {
+            font-family: "Consolas", monospace;
+            font-size: 13px;
+            color: #444;
+            max-width: 380px;
+            overflow-wrap: break-word;
+        }
+        .timestamp-cell {
+            color: #888;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        .empty-state {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <h1>Checkpoint — Activity Dashboard</h1>
+    <div class="subtitle">Every action a coding agent has attempted, and what Checkpoint decided to do about it.</div>
+    <div class="refresh-note">This page refreshes automatically every 5 seconds.</div>
+
+    {% if actions %}
+    <table>
+        <tr>
+            <th>Time</th>
+            <th>Type</th>
+            <th>Action</th>
+            <th>Risk Level</th>
+            <th>What Happened</th>
+            <th>Decision</th>
+        </tr>
+        {% for a in actions %}
+        <tr>
+            <td class="timestamp-cell">{{ a.timestamp.split("T")[1].split(".")[0] }}</td>
+            <td>{{ a.action_type }}</td>
+            <td class="command-cell">{{ a.command }}</td>
+            <td><span class="badge risk-{{ a.risk_tier }}">{{ a.risk_tier }}</span></td>
+            <td><span class="badge status-{{ a.status }}">{{ a.status }}</span></td>
+            <td class="action-buttons">
+                {% if a.status == "pending" %}
+                <a class="btn-approve" href="{{ url_for('resolve', action_id=a.id, decision='approve') }}">Approve</a>
+                <a class="btn-reject" href="{{ url_for('resolve', action_id=a.id, decision='reject') }}">Reject</a>
+                {% else %}
+                &mdash;
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <div class="empty-state">No actions logged yet — run the interceptor or file_ops to see activity here.</div>
+    {% endif %}
+</body>
+</html>

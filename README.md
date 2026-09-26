@@ -69,21 +69,22 @@ after the midterm, with more runway.
 - [x] 6. Pause on MEDIUM/HIGH tier and ask for approve/reject
 - [x] 7. Rejection handling — log, block, confirm no change made
 
-### Phase 3 — Frontend basics (dashboard MVP)
+### Phase 3 — Frontend basics (dashboard MVP) ✅ DONE
 A deliberately simple, plain-language dashboard — not the full product yet,
 just enough to make Phases 1–2 visible and understandable to anyone,
 technical or not. Simplicity here is a design choice we explain in the
 presentation, not a shortcut: a safety tool with a confusing interface
 would repeat the exact problem Checkpoint exists to fix.
-- [ ] 8. Minimal local dashboard (Flask, one page) reading live from
+- [x] 8. Minimal local dashboard (Flask, one page) reading live from
       `storage/checkpoint.db`
-- [ ] 9. Table view: action, risk tier (color-coded — green/yellow/red),
+- [x] 9. Table view: action, risk tier (color-coded — green/yellow/red),
       status (executed / blocked / rejected) — plain language, no raw
       command syntax in the main view
-- [ ] 10. Manual or auto-refresh so newly logged actions show up without
+- [x] 10. Manual or auto-refresh so newly logged actions show up without
       restarting the app
-- [ ] 11. *Stretch, only if time allows:* pending actions get a live
-      approve/reject button in the browser instead of the terminal prompt
+- [x] 11. Pending actions get a live approve/reject button in the browser —
+      the confirmation gate now holds MEDIUM/HIGH actions in a "pending"
+      state (polled every second) instead of blocking on a terminal prompt
 
 ### Phase 4 — Sandbox / dry-run engine
 - [ ] 12. Shadow-copy affected files before modifying/deleting
@@ -128,7 +129,7 @@ would repeat the exact problem Checkpoint exists to fix.
 
 ---
 
-## Midterm presentation plan (4 Oct)
+## Midterm presentation plan
 
 We present Half 1 in full — a complete, working core engine — plus Half 2
 as the clearly-planned second half, not something we're improvising.
