@@ -86,11 +86,10 @@ would repeat the exact problem Checkpoint exists to fix.
       the confirmation gate now holds MEDIUM/HIGH actions in a "pending"
       state (polled every second) instead of blocking on a terminal prompt
 
-### Phase 4 — Sandbox / dry-run engine
-- [ ] 12. Shadow-copy affected files before modifying/deleting
-- [ ] 13. Diff generator — show real outcome, not the raw command
-- [ ] 14. Wire diff output into the confirmation gate (and the dashboard,
-      once Phase 3 is live)
+### Phase 4 — Sandbox / dry-run engine ✅ DONE
+- [x] 12. Shadow-copy affected files before modifying/deleting
+- [x] 13. Diff generator — show real outcome, not the raw command
+- [x] 14. Wire diff output into the confirmation gate (and the dashboard)
 
 ### Phase 5 — Checkpointing and rollback
 - [ ] 15. Save pre-state + post-state per executed action
@@ -129,7 +128,7 @@ would repeat the exact problem Checkpoint exists to fix.
 
 ---
 
-## Midterm presentation plan
+## Midterm presentation plan 
 
 We present Half 1 in full — a complete, working core engine — plus Half 2
 as the clearly-planned second half, not something we're improvising.
@@ -137,9 +136,10 @@ as the clearly-planned second half, not something we're improvising.
 **What we demo live:**
 - A safe action (e.g. `echo`, a normal `git commit`) — runs instantly, shows
   up in the dashboard as "executed," no interruption
-- A risky action (e.g. `git push --force`) — gets paused, simulated in the
-  sandbox so the real outcome is shown (not raw syntax), we approve/reject
-  it, and it's checkpointed either way
+- A risky action (e.g. `git push --force`, or deleting a file) — gets
+  paused, simulated in the sandbox so the real outcome is shown (not raw
+  syntax), approved/rejected live from the dashboard, and checkpointed
+  either way
 - A rollback — undo a previously executed action using a saved checkpoint
 - The dashboard itself: plain labels, color-coded risk, readable by someone
   with zero technical background
@@ -159,9 +159,14 @@ checkpoint/
 │   ├── interceptor.py       # captures & routes shell/git actions through the pipeline
 │   ├── risk_classifier.py   # assigns LOW / MEDIUM / HIGH (shell, file-op, and git-specific rules)
 │   ├── file_ops.py          # intercepted file operations (create, write, delete, move)
-│   └── confirmation.py      # shared gate: auto-executes LOW, pauses for approve/reject otherwise
+│   ├── confirmation.py      # shared gate: auto-executes LOW; MEDIUM/HIGH go pending until the dashboard resolves them
+│   └── sandbox.py           # shadow-copies files + generates real diffs/previews for risky actions
 ├── storage/
-│   └── db.py                # SQLite logging layer
+│   ├── db.py                # SQLite logging layer
+│   └── shadow_copies/       # saved "before" versions of files touched by risky actions
+├── dashboard/
+│   ├── app.py                # Flask app: live table + approve/reject buttons
+│   └── templates/index.html  # the dashboard page itself
 ├── tests/
 ├── docs/
 │   └── Checkpoint_Synopsis.docx
@@ -180,5 +185,6 @@ pip install -r requirements.txt
 ## Running
 
 ```bash
-python core/interceptor.py
+python dashboard/app.py        # terminal 1 — leave running
+python core/interceptor.py     # terminal 2 — or core/file_ops.py, or your own test script
 ```
