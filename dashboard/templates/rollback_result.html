@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Checkpoint — Rollback Result</title>
+    <style>
+        body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; background: #f5f7fa; color: #1a1a1a; margin: 0; padding: 60px; text-align: center; }
+        .card { background: white; max-width: 500px; margin: 0 auto; padding: 32px; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        .success { color: #2E7D32; }
+        .failure { color: #B00020; }
+        a { display: inline-block; margin-top: 20px; color: #1F4E79; text-decoration: none; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2 class="{{ 'success' if success else 'failure' }}">
+            {{ "Rollback successful" if success else "Rollback failed" }}
+        </h2>
+        <p>{{ message }}</p>
+        <a href="{{ url_for('checkpoints') }}">&larr; Back to Rollback History</a>
+    </div>
+</body>
+</html>

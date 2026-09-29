@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Checkpoint — Rollback History</title>
+    <style>
+        body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; background: #f5f7fa; color: #1a1a1a; margin: 0; padding: 40px; }
+        h1 { color: #1F4E79; margin-bottom: 4px; }
+        .subtitle { color: #666; margin-bottom: 24px; font-size: 15px; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #1F4E79; text-decoration: none; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        th { background: #1F4E79; color: white; text-align: left; padding: 12px 16px; font-size: 14px; }
+        td { padding: 12px 16px; border-bottom: 1px solid #eee; font-size: 14px; }
+        tr:last-child td { border-bottom: none; }
+        .file-cell { font-family: "Consolas", monospace; font-size: 13px; }
+        .timestamp-cell { color: #888; font-size: 13px; white-space: nowrap; }
+        .restore-btn { display: inline-block; padding: 6px 16px; border-radius: 6px; font-size: 12.5px; font-weight: 600; text-decoration: none; background: #1F4E79; color: white; }
+        .empty-state { background: white; padding: 40px; border-radius: 10px; text-align: center; color: #888; }
+    </style>
+</head>
+<body>
+    <a class="back-link" href="{{ url_for('dashboard') }}">&larr; Back to Activity</a>
+    <h1>Rollback History</h1>
+    <div class="subtitle">Every saved checkpoint — restore a file to how it looked before a risky action changed it.</div>
+
+    {% if checkpoints %}
+    <table>
+        <tr><th>Saved At</th><th>File</th><th>Why it was saved</th><th>Restore</th></tr>
+        {% for c in checkpoints %}
+        <tr>
+            <td class="timestamp-cell">{{ c.timestamp.split("T")[1].split(".")[0] }}</td>
+            <td class="file-cell">{{ c.file_path }}</td>
+            <td>{{ c.description }}</td>
+            <td><a class="restore-btn" href="{{ url_for('rollback', checkpoint_id=c.id) }}">Restore this version</a></td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <div class="empty-state">No checkpoints saved yet — a checkpoint is created automatically whenever a risky write, delete, or move happens.</div>
+    {% endif %}
+</body>
+</html>

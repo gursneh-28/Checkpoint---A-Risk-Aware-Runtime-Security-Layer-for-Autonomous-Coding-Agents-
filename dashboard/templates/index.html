@@ -34,7 +34,7 @@
 <body>
     <h1>Checkpoint — Activity Dashboard</h1>
     <div class="subtitle">Every action a coding agent has attempted, and what Checkpoint decided to do about it.</div>
-    <div class="refresh-note">This page refreshes automatically every 5 seconds.</div>
+    <div class="refresh-note">This page refreshes automatically every 5 seconds. &nbsp;|&nbsp; <a href="{{ url_for('checkpoints') }}" style="color:#1F4E79;">View Rollback History &rarr;</a></div>
 
     {% if actions %}
     <table>

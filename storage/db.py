@@ -6,18 +6,26 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "checkpoint.db")
 
 
 def init_db():
-    """Create the actions table if it doesn't exist yet. Safe to call every run."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS actions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp TEXT NOT NULL,
-            action_type TEXT NOT NULL,      -- 'shell', 'file', 'git'
+            action_type TEXT NOT NULL,
             command TEXT NOT NULL,
-            risk_tier TEXT NOT NULL,        -- 'LOW', 'MEDIUM', 'HIGH'
-            status TEXT NOT NULL,           -- 'executed', 'blocked', 'rejected', 'pending', 'approved'
+            risk_tier TEXT NOT NULL,
+            status TEXT NOT NULL,
             output TEXT
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS checkpoints (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            snapshot_path TEXT NOT NULL,
+            description TEXT
         )
     """)
     conn.commit()
@@ -25,40 +33,23 @@ def init_db():
 
 
 def log_action(action_type: str, command: str, risk_tier: str, status: str, output: str = ""):
-    """Insert one FINAL action record (used for LOW-tier auto-executed actions)."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO actions (timestamp, action_type, command, risk_tier, status, output)
         VALUES (?, ?, ?, ?, ?, ?)
-    """, (
-        datetime.datetime.now().isoformat(),
-        action_type,
-        command,
-        risk_tier,
-        status,
-        output
-    ))
+    """, (datetime.datetime.now().isoformat(), action_type, command, risk_tier, status, output))
     conn.commit()
     conn.close()
 
 
 def log_pending_action(action_type: str, command: str, risk_tier: str) -> int:
-    """
-    Insert a MEDIUM/HIGH action as 'pending' — it does NOT execute yet.
-    Returns the new row's id, so the caller can poll for a decision on it.
-    """
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO actions (timestamp, action_type, command, risk_tier, status, output)
         VALUES (?, ?, ?, ?, 'pending', '')
-    """, (
-        datetime.datetime.now().isoformat(),
-        action_type,
-        command,
-        risk_tier,
-    ))
+    """, (datetime.datetime.now().isoformat(), action_type, command, risk_tier))
     conn.commit()
     action_id = cursor.lastrowid
     conn.close()
@@ -75,8 +66,6 @@ def get_action_status(action_id: int) -> str:
 
 
 def set_action_status(action_id: int, status: str, output: str = ""):
-    """Used both by the dashboard (approve/reject clicks) and by the interceptor
-    (updating 'approved' -> 'executed' once the action actually runs)."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     if output:
@@ -88,7 +77,6 @@ def set_action_status(action_id: int, status: str, output: str = ""):
 
 
 def get_all_actions():
-    """Return every logged action, most recent first."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM actions ORDER BY id DESC")
@@ -96,6 +84,40 @@ def get_all_actions():
     conn.close()
     return rows
 
+
+# ---------- Checkpoints (Phase 5) ----------
+
+def record_checkpoint(file_path: str, snapshot_path: str, description: str = "") -> int:
+    """Records that 'snapshot_path' holds a saved copy of 'file_path' as it
+    looked right before a risky action touched it."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO checkpoints (timestamp, file_path, snapshot_path, description)
+        VALUES (?, ?, ?, ?)
+    """, (datetime.datetime.now().isoformat(), file_path, snapshot_path, description))
+    conn.commit()
+    checkpoint_id = cursor.lastrowid
+    conn.close()
+    return checkpoint_id
+
+
+def get_all_checkpoints():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM checkpoints ORDER BY id DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
+def get_checkpoint(checkpoint_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM checkpoints WHERE id = ?", (checkpoint_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row
 
 if __name__ == "__main__":
     init_db()

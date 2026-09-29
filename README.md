@@ -91,9 +91,12 @@ would repeat the exact problem Checkpoint exists to fix.
 - [x] 13. Diff generator — show real outcome, not the raw command
 - [x] 14. Wire diff output into the confirmation gate (and the dashboard)
 
-### Phase 5 — Checkpointing and rollback
-- [ ] 15. Save pre-state + post-state per executed action
-- [ ] 16. Rollback function — restore a prior checkpoint
+### Phase 5 — Checkpointing and rollback ✅ DONE
+- [x] 15. Save pre-state + post-state per executed action — every create,
+      write, and move now snapshots BOTH before and after the change, so
+      the file's full version history is saved, not just "one step back"
+- [x] 16. Rollback function — restore any saved checkpoint, including the
+      most recent one (true version history, not just undo-last-action)
 - [ ] 17. Short talking-points script covering Phases 1–5 for a
       non-technical evaluator, rehearsed at least once beforehand
 
@@ -128,11 +131,6 @@ would repeat the exact problem Checkpoint exists to fix.
 
 ---
 
-## Midterm presentation plan 
-
-We present Half 1 in full — a complete, working core engine — plus Half 2
-as the clearly-planned second half, not something we're improvising.
-
 **What we demo live:**
 - A safe action (e.g. `echo`, a normal `git commit`) — runs instantly, shows
   up in the dashboard as "executed," no interruption
@@ -162,11 +160,14 @@ checkpoint/
 │   ├── confirmation.py      # shared gate: auto-executes LOW; MEDIUM/HIGH go pending until the dashboard resolves them
 │   └── sandbox.py           # shadow-copies files + generates real diffs/previews for risky actions
 ├── storage/
-│   ├── db.py                # SQLite logging layer
-│   └── shadow_copies/       # saved "before" versions of files touched by risky actions
+│   ├── db.py                # SQLite logging layer + checkpoints table
+│   └── shadow_copies/       # every saved version of every file risky actions have touched
 ├── dashboard/
-│   ├── app.py                # Flask app: live table + approve/reject buttons
-│   └── templates/index.html  # the dashboard page itself
+│   ├── app.py                     # Flask app: live table, approve/reject, checkpoints, rollback
+│   └── templates/
+│       ├── index.html             # main activity dashboard
+│       ├── checkpoints.html       # rollback history — pick any saved version
+│       └── rollback_result.html   # confirms a rollback succeeded/failed
 ├── tests/
 ├── docs/
 │   └── Checkpoint_Synopsis.docx

@@ -1,12 +1,19 @@
-from core.file_ops import intercept_create, intercept_write, intercept_delete
+from core.file_ops import intercept_write
+from storage.db import get_all_checkpoints, init_db
 
-print("Step 1: creating a test file...")
-intercept_create("my_notes.txt", "This is line one.\nThis is line two.\n")
+init_db()
 
-print("\nStep 2: adding more content to it...")
-intercept_write("my_notes.txt", "This is line three, just added.\n")
+# Create a file with some starting content
+with open("my_notes.txt", "w") as f:
+    f.write("Version 1\n")
 
-print("\nStep 3: now trying to DELETE it (this should pause and wait for the dashboard)...")
-intercept_delete("my_notes.txt")
+# A few writes — each one should snapshot the file BEFORE changing it
+intercept_write("my_notes.txt", "Version 2\n")
+intercept_write("my_notes.txt", "Version 3\n")
 
-print("\nDone.")
+print("\n=== Current file content ===")
+print(open("my_notes.txt").read())
+
+print("=== Checkpoints saved ===")
+for c in get_all_checkpoints():
+    print(c)
