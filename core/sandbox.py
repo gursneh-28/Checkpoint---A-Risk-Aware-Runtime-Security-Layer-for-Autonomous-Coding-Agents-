@@ -27,7 +27,7 @@ def snapshot_file(path: str, description: str = "") -> str:
     snapshot_path = os.path.join(SHADOW_DIR, snapshot_name)
     shutil.copy2(path, snapshot_path)
 
-    record_checkpoint(file_path=path, snapshot_path=snapshot_path, description=description)
+    record_checkpoint(file_path=os.path.abspath(path), snapshot_path=snapshot_path, description=description)
     return snapshot_path
 
 
