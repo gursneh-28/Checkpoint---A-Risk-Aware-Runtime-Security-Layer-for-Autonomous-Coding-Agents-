@@ -4,7 +4,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from flask import Flask, render_template, redirect, url_for
-from storage.db import get_all_actions, init_db, set_action_status, get_all_checkpoints
+from storage.db import get_all_actions, init_db, set_action_status, get_all_checkpoints, decide_action
 from core.sandbox import rollback_checkpoint
 
 app = Flask(__name__)
@@ -26,9 +26,9 @@ def dashboard():
 @app.route("/resolve/<int:action_id>/<decision>")
 def resolve(action_id, decision):
     if decision == "approve":
-        set_action_status(action_id, "approved")
+        decide_action(action_id, "approved")
     elif decision == "reject":
-        set_action_status(action_id, "rejected")
+        decide_action(action_id, "rejected")
     return redirect(url_for("dashboard"))
 
 

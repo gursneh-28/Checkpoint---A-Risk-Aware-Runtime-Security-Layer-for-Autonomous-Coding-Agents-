@@ -76,6 +76,16 @@ def set_action_status(action_id: int, status: str, output: str = ""):
     conn.close()
 
 
+def decide_action(action_id: int, decision: str) -> bool:
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE actions SET status=? WHERE id=? AND status='pending'", (decision, action_id))
+    success = cursor.rowcount == 1
+    conn.commit()
+    conn.close()
+    return success
+
+
 def get_all_actions():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
