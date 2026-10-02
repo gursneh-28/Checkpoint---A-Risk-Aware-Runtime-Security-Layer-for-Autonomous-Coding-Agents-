@@ -5,7 +5,7 @@ import difflib
 import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from storage.db import record_checkpoint, get_checkpoint
+from storage.db import record_checkpoint, get_checkpoint, log_action
 
 SHADOW_DIR = os.path.join(os.path.dirname(__file__), "..", "storage", "shadow_copies")
 
@@ -27,7 +27,7 @@ def snapshot_file(path: str, description: str = "") -> str:
     snapshot_path = os.path.join(SHADOW_DIR, snapshot_name)
     shutil.copy2(path, snapshot_path)
 
-    record_checkpoint(file_path=path, snapshot_path=snapshot_path, description=description)
+    record_checkpoint(file_path=os.path.abspath(path), snapshot_path=snapshot_path, description=description)
     return snapshot_path
 
 
@@ -44,7 +44,11 @@ def rollback_checkpoint(checkpoint_id: int):
     if not os.path.isfile(snapshot_path):
         return False, f"Snapshot file for checkpoint #{checkpoint_id} is missing on disk."
 
+    if os.path.isfile(file_path):
+        snapshot_file(file_path, description=f"Before rolling back to checkpoint #{checkpoint_id}")
+
     shutil.copy2(snapshot_path, file_path)
+    log_action("file", f"ROLLBACK {file_path} to checkpoint #{checkpoint_id}", "MEDIUM", "executed")
     return True, f"Restored '{file_path}' to its state from checkpoint #{checkpoint_id} ({timestamp})."
 
 
