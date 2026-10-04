@@ -14,7 +14,7 @@
         tr:last-child td { border-bottom: none; }
         .file-cell { font-family: "Consolas", monospace; font-size: 13px; }
         .timestamp-cell { color: #888; font-size: 13px; white-space: nowrap; }
-        .restore-btn { display: inline-block; padding: 6px 16px; border-radius: 6px; font-size: 12.5px; font-weight: 600; text-decoration: none; background: #1F4E79; color: white; }
+        .restore-btn { display: inline-block; padding: 6px 16px; border-radius: 6px; font-size: 12.5px; font-weight: 600; text-decoration: none; background: #1F4E79; color: white; border: none; cursor: pointer; font-family: inherit; }
         .empty-state { background: white; padding: 40px; border-radius: 10px; text-align: center; color: #888; }
     </style>
 </head>
@@ -31,7 +31,12 @@
             <td class="timestamp-cell">{{ c.timestamp.split("T")[1].split(".")[0] }}</td>
             <td class="file-cell">{{ c.file_path }}</td>
             <td>{{ c.description }}</td>
-            <td><a class="restore-btn" href="{{ url_for('rollback', checkpoint_id=c.id) }}">Restore this version</a></td>
+            <td>
+                <form method="post" action="{{ url_for('rollback', checkpoint_id=c.id) }}" style="display:inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="restore-btn">Restore this version</button>
+                </form>
+            </td>
         </tr>
         {% endfor %}
     </table>
