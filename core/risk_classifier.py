@@ -21,6 +21,27 @@ DEFINITELY_SAFE_PREFIXES = [
 
 CHAIN_OPERATORS = r"&&|\|\||;|\|"
 RISK_ORDER = {"LOW": 0, "MEDIUM": 1, "HIGH": 2}
+SHELL_PIPE_RE = re.compile(r"\|\s*(sudo\s+)?(ba|z|da|k)?sh\b")
+SYSTEM_REDIRECT_RE = re.compile(r">>?\s*/(etc|boot|usr|bin|sbin|sys|proc|lib)/")
+
+
+def _pipes_into_shell(command: str) -> bool:
+    """curl x | bash and friends. Must be checked BEFORE chain-splitting,
+    because splitting on the pipe hides the danger."""
+    return bool(SHELL_PIPE_RE.search(command.lower()))
+
+
+def _is_recursive_force_rm(cmd_lower: str) -> bool:
+    """rm with both a recursive and a force flag, in any order or spelling
+    (-rf, -fr, -r -f, --recursive --force)."""
+    tokens = cmd_lower.split()
+    if "rm" not in tokens:
+        return False
+    args = tokens[tokens.index("rm") + 1:]
+    short = "".join(t[1:] for t in args if t.startswith("-") and not t.startswith("--"))
+    recursive = "r" in short or "--recursive" in args
+    force = "f" in short or "--force" in args
+    return recursive and force
 
 
 def _split_chained_commands(command: str):
@@ -45,6 +66,8 @@ def classify_by_rules(command: str):
     cmd_lower = command.lower().strip()
     if any(p in cmd_lower for p in HIGH_RISK_PATTERNS):
         return "HIGH"
+    if _is_recursive_force_rm(cmd_lower) or SYSTEM_REDIRECT_RE.search(cmd_lower):
+        return "HIGH"
     if _is_definitely_safe(cmd_lower):
         return "LOW"
     if any(p in cmd_lower for p in MEDIUM_RISK_PATTERNS):
@@ -59,6 +82,8 @@ def classify_risk(command: str) -> str:
        authoritative.
     3. Only if no rule matches does the trained ML model decide.
     """
+    if _pipes_into_shell(command):
+        return "HIGH"
     parts = _split_chained_commands(command)
     if len(parts) > 1:
         tiers = [classify_git_op(p) if p.lower().startswith("git ") else classify_risk(p)
@@ -93,6 +118,8 @@ def classify_git_op(git_command: str) -> str:
     """Same chained-command handling as classify_risk. Hardcoded subcommand
     rules are authoritative; an unrecognized subcommand falls back to the
     trained model instead of a flat MEDIUM."""
+    if _pipes_into_shell(git_command):
+        return "HIGH"
     parts = _split_chained_commands(git_command)
     if len(parts) > 1:
         tiers = [classify_git_op(p) if p.lower().startswith("git ") else classify_risk(p)

