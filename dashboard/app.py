@@ -1,6 +1,7 @@
 import sys
 import os
 import secrets
+import json
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -35,24 +36,25 @@ def dashboard():
     raw_rows = get_all_actions()
     actions = []
     for row in raw_rows:
+        suggestion = json.loads(row[7]) if len(row) > 7 and row[7] else None
         actions.append({
             "id": row[0], "timestamp": row[1], "action_type": row[2],
             "command": row[3], "risk_tier": row[4], "status": row[5],
+            "suggestion": suggestion["text"] if suggestion else None,
         })
     return render_template("index.html", actions=actions)
+
+
+DECISIONS = {"approve": "approved", "reject": "rejected", "alternative": "alternative"}
 
 
 @app.route("/resolve/<int:action_id>/<decision>", methods=["POST"])
 def resolve(action_id, decision):
     check_csrf()
-    if decision not in ("approve", "reject"):
+    if decision not in DECISIONS:
         abort(400)
-    if decision == "approve":
-        decide_action(action_id, "approved")
-    elif decision == "reject":
-        decide_action(action_id, "rejected")
+    decide_action(action_id, DECISIONS[decision])
     return redirect(url_for("dashboard"))
-
 
 @app.route("/checkpoints")
 def checkpoints():

@@ -6,6 +6,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from core.risk_classifier import classify_file_op
 from core.confirmation import resolve_action
 from core.sandbox import snapshot_file, diff_for_write, diff_for_delete, diff_for_move
+from core.suggestions import move_to_trash
 
 
 def intercept_create(path: str, content: str = ""):
@@ -43,8 +44,6 @@ def intercept_delete(path: str):
     tier = classify_file_op("delete", path)
 
     def execute():
-        # Only a "before" snapshot makes sense here — after deletion, there's
-        # nothing left to snapshot. This before-snapshot IS the last version.
         snapshot_file(path, description=f"Before deleting {path} (last version before deletion)")
         if os.path.isfile(path):
             os.remove(path)
@@ -52,8 +51,17 @@ def intercept_delete(path: str):
             shutil.rmtree(path)
         return f"deleted {path}"
 
+    suggestion = None
+    alternative_fn = None
+    if os.path.exists(path):
+        suggestion = {"kind": "trash",
+                      "text": "Move to the local trash folder instead: fully recoverable.",
+                      "paths": [path], "command": None}
+        alternative_fn = lambda: f"moved to trash: {move_to_trash(path)}"
+
     description = f"DELETE {path}" if tier == "LOW" else diff_for_delete(path)
-    resolve_action("file", description, tier, execute)
+    resolve_action("file", description, tier, execute,
+                   suggestion=suggestion, alternative_fn=alternative_fn)
 
 
 def intercept_move(src: str, dst: str):

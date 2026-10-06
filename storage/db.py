@@ -1,8 +1,11 @@
 import sqlite3
 import datetime
+import json
 import os
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "checkpoint.db")
+
+VALID_DECISIONS = ("approved", "rejected", "alternative")
 
 
 def init_db():
@@ -16,7 +19,8 @@ def init_db():
             command TEXT NOT NULL,
             risk_tier TEXT NOT NULL,
             status TEXT NOT NULL,
-            output TEXT
+            output TEXT,
+            suggestion TEXT
         )
     """)
     cursor.execute("""
@@ -28,6 +32,11 @@ def init_db():
             description TEXT
         )
     """)
+    # Upgrade databases created before the suggestion feature existed.
+    cursor.execute("PRAGMA table_info(actions)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "suggestion" not in columns:
+        cursor.execute("ALTER TABLE actions ADD COLUMN suggestion TEXT")
     conn.commit()
     conn.close()
 
@@ -43,13 +52,16 @@ def log_action(action_type: str, command: str, risk_tier: str, status: str, outp
     conn.close()
 
 
-def log_pending_action(action_type: str, command: str, risk_tier: str) -> int:
+def log_pending_action(action_type: str, command: str, risk_tier: str, suggestion: dict = None) -> int:
+    """Logs an action as 'pending'. If a safer alternative exists, it is
+    stored (as JSON) alongside the action so the dashboard can offer it."""
+    suggestion_json = json.dumps(suggestion) if suggestion else None
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO actions (timestamp, action_type, command, risk_tier, status, output)
-        VALUES (?, ?, ?, ?, 'pending', '')
-    """, (datetime.datetime.now().isoformat(), action_type, command, risk_tier))
+        INSERT INTO actions (timestamp, action_type, command, risk_tier, status, output, suggestion)
+        VALUES (?, ?, ?, ?, 'pending', '', ?)
+    """, (datetime.datetime.now().isoformat(), action_type, command, risk_tier, suggestion_json))
     conn.commit()
     action_id = cursor.lastrowid
     conn.close()
@@ -65,6 +77,18 @@ def get_action_status(action_id: int) -> str:
     return row[0] if row else None
 
 
+def get_action_suggestion(action_id: int):
+    """Returns the stored suggestion dict for an action, or None."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT suggestion FROM actions WHERE id = ?", (action_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row or not row[0]:
+        return None
+    return json.loads(row[0])
+
+
 def set_action_status(action_id: int, status: str, output: str = ""):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -77,9 +101,27 @@ def set_action_status(action_id: int, status: str, output: str = ""):
 
 
 def decide_action(action_id: int, decision: str) -> bool:
+    """
+    Records a user's decision on a pending action. Returns True only if this
+    call actually made the decision.
+
+    - Only 'pending' actions can be decided, so a double-click or a second
+      request can never flip an already-decided action.
+    - 'alternative' is only accepted when the action actually has a stored
+      suggestion; otherwise there would be nothing safe to run.
+    """
+    if decision not in VALID_DECISIONS:
+        return False
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("UPDATE actions SET status=? WHERE id=? AND status='pending'", (decision, action_id))
+    if decision == "alternative":
+        cursor.execute(
+            "UPDATE actions SET status=? WHERE id=? AND status='pending' AND suggestion IS NOT NULL",
+            (decision, action_id))
+    else:
+        cursor.execute(
+            "UPDATE actions SET status=? WHERE id=? AND status='pending'",
+            (decision, action_id))
     success = cursor.rowcount == 1
     conn.commit()
     conn.close()
@@ -128,6 +170,7 @@ def get_checkpoint(checkpoint_id: int):
     row = cursor.fetchone()
     conn.close()
     return row
+
 
 if __name__ == "__main__":
     init_db()
