@@ -1,0 +1,116 @@
+command,risk_tier
+cat notes.txt,LOW
+echo Processing notes.txt,LOW
+ls -la,LOW
+python notes.txt,LOW
+npm install,LOW
+pip install requests,LOW
+cat app.py,LOW
+echo Processing app.py,LOW
+python app.py,LOW
+cat index.html,LOW
+echo Processing index.html,LOW
+python index.html,LOW
+cat data.csv,LOW
+echo Processing data.csv,LOW
+python data.csv,LOW
+cat config.yaml,LOW
+echo Processing config.yaml,LOW
+python config.yaml,LOW
+cat report.docx,LOW
+echo Processing report.docx,LOW
+python report.docx,LOW
+cat utils.py,LOW
+echo Processing utils.py,LOW
+python utils.py,LOW
+cat styles.css,LOW
+echo Processing styles.css,LOW
+python styles.css,LOW
+cat readme.md,LOW
+echo Processing readme.md,LOW
+python readme.md,LOW
+cat server.js,LOW
+echo Processing server.js,LOW
+python server.js,LOW
+rm notes.txt,MEDIUM
+mv notes.txt backup_notes.txt,MEDIUM
+rm app.py,MEDIUM
+mv app.py backup_app.py,MEDIUM
+rm index.html,MEDIUM
+mv index.html backup_index.html,MEDIUM
+rm data.csv,MEDIUM
+mv data.csv backup_data.csv,MEDIUM
+rm config.yaml,MEDIUM
+mv config.yaml backup_config.yaml,MEDIUM
+rm report.docx,MEDIUM
+mv report.docx backup_report.docx,MEDIUM
+rm utils.py,MEDIUM
+mv utils.py backup_utils.py,MEDIUM
+rm styles.css,MEDIUM
+mv styles.css backup_styles.css,MEDIUM
+rm readme.md,MEDIUM
+mv readme.md backup_readme.md,MEDIUM
+rm server.js,MEDIUM
+mv server.js backup_server.js,MEDIUM
+rm -rf build/,HIGH
+rm -rf dist/,HIGH
+rm -rf temp/,HIGH
+rm -rf logs/,HIGH
+rm -rf node_modules/,HIGH
+rm -rf cache/,HIGH
+rm -rf src/,HIGH
+rm -rf assets/,HIGH
+rm -rf old_backups/,HIGH
+chmod 777 server.js,HIGH
+sudo rm -rf /,HIGH
+echo data > /dev/sda,HIGH
+"git commit -m ""update main""",LOW
+git status,LOW
+git log,LOW
+git pull origin main,LOW
+git push origin main,HIGH
+git push --force origin main,HIGH
+git branch -d main,HIGH
+git reset --hard main,HIGH
+"git commit -m ""update master""",LOW
+git pull origin master,LOW
+git push origin master,HIGH
+git push --force origin master,HIGH
+git branch -d master,HIGH
+git reset --hard master,HIGH
+"git commit -m ""update production""",LOW
+git pull origin production,LOW
+git push origin production,HIGH
+git push --force origin production,HIGH
+git branch -d production,HIGH
+git reset --hard production,HIGH
+"git commit -m ""update feature-login""",LOW
+git pull origin feature-login,LOW
+git push origin feature-login,MEDIUM
+git push --force origin feature-login,HIGH
+git branch -d feature-login,MEDIUM
+git reset --hard feature-login,HIGH
+"git commit -m ""update dev""",LOW
+git pull origin dev,LOW
+git push origin dev,MEDIUM
+git push --force origin dev,HIGH
+git branch -d dev,MEDIUM
+git reset --hard dev,HIGH
+"git commit -m ""update bugfix-123""",LOW
+git pull origin bugfix-123,LOW
+git push origin bugfix-123,MEDIUM
+git push --force origin bugfix-123,HIGH
+git branch -d bugfix-123,MEDIUM
+git reset --hard bugfix-123,HIGH
+"git commit -m ""update release-v2""",LOW
+git pull origin release-v2,LOW
+git push origin release-v2,MEDIUM
+git push --force origin release-v2,HIGH
+git branch -d release-v2,MEDIUM
+git reset --hard release-v2,HIGH
+"git commit -m ""update staging""",LOW
+git pull origin staging,LOW
+git push origin staging,MEDIUM
+git push --force origin staging,HIGH
+git branch -d staging,MEDIUM
+git reset --hard staging,HIGH
