@@ -2,36 +2,24 @@ command,risk_tier
 cat notes.txt,LOW
 echo Processing notes.txt,LOW
 ls -la,LOW
-python notes.txt,LOW
-npm install,LOW
-pip install requests,LOW
 cat app.py,LOW
 echo Processing app.py,LOW
-python app.py,LOW
 cat index.html,LOW
 echo Processing index.html,LOW
-python index.html,LOW
 cat data.csv,LOW
 echo Processing data.csv,LOW
-python data.csv,LOW
 cat config.yaml,LOW
 echo Processing config.yaml,LOW
-python config.yaml,LOW
 cat report.docx,LOW
 echo Processing report.docx,LOW
-python report.docx,LOW
 cat utils.py,LOW
 echo Processing utils.py,LOW
-python utils.py,LOW
 cat styles.css,LOW
 echo Processing styles.css,LOW
-python styles.css,LOW
 cat readme.md,LOW
 echo Processing readme.md,LOW
-python readme.md,LOW
 cat server.js,LOW
 echo Processing server.js,LOW
-python server.js,LOW
 rm notes.txt,MEDIUM
 mv notes.txt backup_notes.txt,MEDIUM
 rm app.py,MEDIUM
