@@ -52,6 +52,82 @@ rm -rf old_backups/,HIGH
 chmod 777 server.js,HIGH
 sudo rm -rf /,HIGH
 echo data > /dev/sda,HIGH
+cat main.py,LOW
+echo checking main.py,LOW
+rm main.py,MEDIUM
+mv main.py archive_main.py,MEDIUM
+chmod 777 main.py,HIGH
+cat test_app.py,LOW
+echo checking test_app.py,LOW
+rm test_app.py,MEDIUM
+mv test_app.py archive_test_app.py,MEDIUM
+chmod 777 test_app.py,HIGH
+cat package.json,LOW
+echo checking package.json,LOW
+rm package.json,MEDIUM
+mv package.json archive_package.json,MEDIUM
+chmod 777 package.json,HIGH
+cat schema.sql,LOW
+echo checking schema.sql,LOW
+rm schema.sql,MEDIUM
+mv schema.sql archive_schema.sql,MEDIUM
+chmod 777 schema.sql,HIGH
+cat deploy.sh,LOW
+echo checking deploy.sh,LOW
+rm deploy.sh,MEDIUM
+mv deploy.sh archive_deploy.sh,MEDIUM
+chmod 777 deploy.sh,HIGH
+cat database.db,LOW
+echo checking database.db,LOW
+rm database.db,MEDIUM
+mv database.db archive_database.db,MEDIUM
+chmod 777 database.db,HIGH
+cat app.log,LOW
+echo checking app.log,LOW
+rm app.log,MEDIUM
+mv app.log archive_app.log,MEDIUM
+chmod 777 app.log,HIGH
+cat requirements.txt,LOW
+echo checking requirements.txt,LOW
+rm requirements.txt,MEDIUM
+mv requirements.txt archive_requirements.txt,MEDIUM
+chmod 777 requirements.txt,HIGH
+cat setup.py,LOW
+echo checking setup.py,LOW
+rm setup.py,MEDIUM
+mv setup.py archive_setup.py,MEDIUM
+chmod 777 setup.py,HIGH
+cat Dockerfile,LOW
+echo checking Dockerfile,LOW
+rm Dockerfile,MEDIUM
+mv Dockerfile archive_Dockerfile,MEDIUM
+chmod 777 Dockerfile,HIGH
+rm -rf tmp/,HIGH
+sudo rm -rf tmp/,HIGH
+ls tmp/,LOW
+mv tmp/ old_tmp/,MEDIUM
+rm -rf output/,HIGH
+sudo rm -rf output/,HIGH
+ls output/,LOW
+mv output/ old_output/,MEDIUM
+rm -rf coverage/,HIGH
+sudo rm -rf coverage/,HIGH
+ls coverage/,LOW
+mv coverage/ old_coverage/,MEDIUM
+rm -rf venv/,HIGH
+sudo rm -rf venv/,HIGH
+ls venv/,LOW
+mv venv/ old_venv/,MEDIUM
+rm -rf __pycache__/,HIGH
+sudo rm -rf __pycache__/,HIGH
+ls __pycache__/,LOW
+mv __pycache__/ old___pycache__/,MEDIUM
+rm -rf uploads/,HIGH
+sudo rm -rf uploads/,HIGH
+ls uploads/,LOW
+mv uploads/ old_uploads/,MEDIUM
+drop table users,HIGH
+psql -c 'drop table orders',HIGH
 "git commit -m ""update main""",LOW
 git status,LOW
 git log,LOW
@@ -102,3 +178,54 @@ git push origin staging,MEDIUM
 git push --force origin staging,HIGH
 git branch -d staging,MEDIUM
 git reset --hard staging,HIGH
+python app.py,LOW
+python main.py,LOW
+python -m pytest,LOW
+pytest tests/ -v,LOW
+npm run build,LOW
+npm test,LOW
+npm run dev,LOW
+node server.js,LOW
+head -n 20 app.py,LOW
+tail -f logs/app.log,LOW
+grep -r TODO src/,LOW
+wc -l app.py,LOW
+find . -name '*.py',LOW
+tree,LOW
+touch notes.txt,LOW
+mkdir build,LOW
+cd src,LOW
+df -h,LOW
+ps aux,LOW
+pip install requests,MEDIUM
+pip install -r requirements.txt,MEDIUM
+pip uninstall requests,MEDIUM
+npm install,MEDIUM
+npm install express,MEDIUM
+npm uninstall lodash,MEDIUM
+curl -O https://example.com/file.zip,MEDIUM
+wget https://example.com/data.csv,MEDIUM
+sed -i s/old/new/ app.py,MEDIUM
+chmod +x run.sh,MEDIUM
+chown user app.py,MEDIUM
+kill 1234,MEDIUM
+pkill node,MEDIUM
+docker stop web,MEDIUM
+kubectl delete pod web-1,MEDIUM
+git rebase main,MEDIUM
+git merge feature-login,MEDIUM
+git stash drop,MEDIUM
+git checkout -- .,MEDIUM
+git clean -fd,HIGH
+git clean -fdx build/,HIGH
+chmod -R 777 /var/www,HIGH
+dd if=/dev/zero of=/dev/sda,HIGH
+mkfs.ext4 /dev/sda1,HIGH
+shutdown -h now,HIGH
+sudo reboot,HIGH
+kill -9 -1,HIGH
+find /var -type f -delete,HIGH
+truncate -s 0 production.db,HIGH
+docker system prune -af,HIGH
+kubectl delete namespace production,HIGH
+format c:,HIGH

@@ -45,6 +45,20 @@ def generate_shell_commands():
     examples.append("sudo rm -rf /")
     examples.append("echo data > /dev/sda")
 
+    for f in EXTRA_FILES:
+        examples.append(f"cat {f}")
+        examples.append(f"echo checking {f}")
+        examples.append(f"rm {f}")
+        examples.append(f"mv {f} archive_{f}")
+        examples.append(f"chmod 777 {f}")
+    for folder in EXTRA_FOLDERS:
+        examples.append(f"rm -rf {folder}")
+        examples.append(f"sudo rm -rf {folder}")
+        examples.append(f"ls {folder}")
+        examples.append(f"mv {folder} old_{folder}")
+    examples.append("drop table users")
+    examples.append("psql -c 'drop table orders'")
+
     return examples
 
 
@@ -61,6 +75,38 @@ def generate_git_commands():
         examples.append(f"git reset --hard {branch}")
     return examples
 
+EXTRA_FILES = ["main.py", "test_app.py", "package.json", "schema.sql", "deploy.sh",
+               "database.db", "app.log", "requirements.txt", "setup.py", "Dockerfile"]
+EXTRA_FOLDERS = ["tmp/", "output/", "coverage/", "venv/", "__pycache__/", "uploads/"]
+
+# Hand-labeled commands that NO hardcoded rule covers. These teach the model
+# the gap cases. The generator checks each one against the rules and skips
+# any that a rule already handles, so rules stay authoritative.
+HAND_LABELED = {
+    "LOW": [
+        "python app.py", "python main.py", "python -m pytest", "pytest tests/ -v",
+        "npm run build", "npm test", "npm run dev", "node server.js",
+        "head -n 20 app.py", "tail -f logs/app.log", "grep -r TODO src/",
+        "wc -l app.py", "find . -name '*.py'", "tree", "touch notes.txt",
+        "mkdir build", "cd src", "df -h", "ps aux",
+    ],
+    "MEDIUM": [
+        "pip install requests", "pip install -r requirements.txt", "pip uninstall requests",
+        "npm install", "npm install express", "npm uninstall lodash",
+        "curl -O https://example.com/file.zip", "wget https://example.com/data.csv",
+        "sed -i s/old/new/ app.py", "chmod +x run.sh", "chown user app.py",
+        "kill 1234", "pkill node", "docker stop web", "kubectl delete pod web-1",
+        "git rebase main", "git merge feature-login", "git stash drop",
+        "git checkout -- .",
+    ],
+    "HIGH": [
+        "git clean -fd", "git clean -fdx build/", "chmod -R 777 /var/www",
+        "dd if=/dev/zero of=/dev/sda", "mkfs.ext4 /dev/sda1", "shutdown -h now",
+        "sudo reboot", "kill -9 -1", "find /var -type f -delete",
+        "truncate -s 0 production.db", "docker system prune -af",
+        "kubectl delete namespace production", "format c:",
+    ],
+}
 
 def build_dataset():
     rows = []
@@ -76,7 +122,12 @@ def build_dataset():
     for cmd in generate_git_commands():
         label = classify_git_op(cmd)
         rows.append((cmd, label))
-
+    for label, commands in HAND_LABELED.items():
+        for cmd in commands:
+            if classify_by_rules(cmd) is not None:
+                print(f"Skipping hand-labeled {cmd!r}: a hardcoded rule already covers it")
+                continue
+            rows.append((cmd, label))
     seen = set()
     unique_rows = []
     for cmd, label in rows:
