@@ -13,7 +13,7 @@ import os
 import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from core.risk_classifier import classify_risk, classify_git_op
+from core.risk_classifier import classify_by_rules, classify_git_op
 
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "..", "storage", "training_data.csv")
 
@@ -64,9 +64,13 @@ def generate_git_commands():
 
 def build_dataset():
     rows = []
+    skipped = []
 
     for cmd in generate_shell_commands():
-        label = classify_risk(cmd)
+        label = classify_by_rules(cmd)
+        if label is None:
+            skipped.append(cmd)
+            continue
         rows.append((cmd, label))
 
     for cmd in generate_git_commands():
@@ -86,6 +90,8 @@ def build_dataset():
         writer.writerow(["command", "risk_tier"])
         writer.writerows(unique_rows)
 
+    if skipped:
+        print(f"Skipped {len(set(skipped))} commands no rule covers (e.g. {skipped[0]!r})")
     return unique_rows
 
 
