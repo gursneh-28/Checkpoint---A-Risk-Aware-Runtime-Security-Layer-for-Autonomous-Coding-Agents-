@@ -30,21 +30,14 @@ def _check(result, expected):
     (classify_file_op, ("write", "config.yaml"), "MEDIUM"),
     (classify_file_op, ("delete", "src/app.py"), "MEDIUM"),
     (classify_file_op, ("delete", "/etc/passwd"), "HIGH"),
+    # Former Group B1 rule gaps — now verified fixed per v2.3 spec:
+    (classify_git_op, ("git push origin feature/maintenance",), "MEDIUM"),
+    (classify_file_op, ("write", "/etc/hosts"), "MEDIUM"),
+    (classify_file_op, ("write", "../outside.txt"), "MEDIUM"),
+    (classify_file_op, ("move", "/etc/passwd"), "HIGH"),
 ])
 def test_current_behaviour(func, args, expected):
     assert func(*args) == expected
-
-
-# Group B1: gaps decided purely by hardcoded rules. Deterministic, so strict:
-# if you fix one, this test will XPASS-fail and tell you to move it to Group A.
-@pytest.mark.parametrize("func, args, expected", [
-    pytest.param(classify_git_op, ("git push origin feature/maintenance",), "MEDIUM", marks=pytest.mark.xfail(strict=True, reason="false alarm on 'main' substring in 'maintenance'")),
-    pytest.param(classify_file_op, ("write", "/etc/hosts"), "not LOW", marks=pytest.mark.xfail(strict=True, reason="system files are not protected from writes")),
-    pytest.param(classify_file_op, ("write", "../outside.txt"), "not LOW", marks=pytest.mark.xfail(strict=True, reason="path traversal is not checked for writes")),
-    pytest.param(classify_file_op, ("move", "/etc/passwd"), "HIGH", marks=pytest.mark.xfail(strict=True, reason="moving sensitive system files is not high risk")),
-])
-def test_known_rule_gaps(func, args, expected):
-    _check(func(*args), expected)
 
 
 # Group B2: gaps that fall through to the ML model. The result depends on the

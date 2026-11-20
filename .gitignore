@@ -5,3 +5,25 @@ __pycache__/
 *.db
 storage/shadow_copies/
 my_notes.txt
+
+# Dataset / risk-classifier research work (not part of the project yet)
+/repos.py
+/repos.json
+/scripts.py
+/scripts/
+/tmp/
+/commands.py
+/clean_commands.py
+/command_filter.py
+/commands.jsonl
+/commands_clean.jsonl
+/commands_filtered.jsonl
+/command_final.py
+/command_final.csv
+
+# Demo leftovers
+/demo.py
+/demo_workspace/
+
+# Output folder created by "Do this instead"
+storage/trash/

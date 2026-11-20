@@ -31,103 +31,9 @@ Checkpoint    ────────→  Dashboard (shows outcome, not raw com
               Execute + new checkpoint  /  Reject, logged  /  Safer alternative run
 ```
 
-## How a command gets its risk tier
-
-`core/risk_classifier.py` judges every command in this order, and the first
-step that applies wins:
-
-1. **Pipe into a shell** (`curl ... | bash`) → HIGH. Checked on the full
-   command *before* splitting, because splitting on the pipe would hide it.
-2. **Chained commands** (`&&`, `||`, `;`, `|`) are split, each part is
-   judged separately, and the **highest** tier wins.
-3. **Hardcoded rules (authoritative):**
-   - HIGH patterns, plus `rm` with recursive + force flags in any order or
-     spelling (`-rf`, `-fr`, `-r -f`), plus redirects into system paths
-     (`> /etc/...`, `> /dev/...`).
-   - A small allowlist of read-only commands (`ls`, `pwd`, `cat`, ...) → LOW.
-     Matched as whole words only, and never if the command contains a
-     redirect or substitution that could hide a write.
-   - MEDIUM patterns (`rm `, `mv `, `git push`, ...).
-4. **ML fallback:** only if no rule matches, a trained model predicts the
-   tier. If the model is unsure about a LOW prediction, the result is
-   bumped to MEDIUM. If the model file or scikit-learn is unavailable, the
-   result is MEDIUM. The model can never be the reason a rule is overridden.
-
-### About the ML model (stated honestly)
-- TF-IDF (character n-grams) + Logistic Regression, chosen because it is
-  small, fast, and explainable.
-- Trained on 230 labeled commands. Most labels come from the hardcoded
-  rules (`classify_by_rules`, which never calls the model, so the model is
-  never trained on its own guesses). A small hand-labeled set covers
-  commands no rule handles; those labels are judgement calls.
-- Measured accuracy: about 83% on a 46-example held-out test set. This is a
-  small test set, so treat the number as indicative, not precise. HIGH
-  recall was 100% in that run.
-- Results for commands with no rule can shift when the model is retrained.
-  The tests for those cases are deliberately non-strict for that reason.
-
-## How "Do this instead" actually works
-
-When a risky action is intercepted, it isn't just labeled risky and left
-there — the system checks whether a known, safer way to do the same thing
-exists, and if so, offers it as a real third choice, not just a warning.
-
-**How a suggestion is generated:** this is a plain, hardcoded lookup — not
-AI, and not the same model used for risk scoring (`core/suggestions.py`). A
-command's text is checked against a small table of known risky patterns,
-each mapped to a safer equivalent action:
-
-| Risky pattern detected | Safer alternative offered |
-|---|---|
-| `git push --force` / `-f` | `git push --force-with-lease` (fails safely instead of silently overwriting someone else's work) |
-| `git reset --hard` | `git stash` (keeps the changes recoverable instead of discarding them) |
-| Permanently deleting a file (`rm`, or a file delete) | Move the file into `storage/trash/` instead (fully recoverable, never overwrites an earlier trashed file) |
-
-If a command doesn't match any pattern in this table, or is a chain of
-several commands, no suggestion is generated, and only Approve/Reject are
-shown — "Do this instead" never appears for an action with no known safer
-version.
-
-**How the three-way decision actually gets resolved:**
-1. The risky action is logged to the database with status `pending`,
-   along with its suggestion (if one exists), stored for display only.
-2. The dashboard displays the action, its risk tier, and — if present — a
-   highlighted suggestion box with a third button alongside Approve/Reject.
-3. Whichever option the user picks sends a CSRF-protected POST request that
-   updates that action's status in the database (`approved`, `rejected`,
-   or `alternative`).
-4. The part of the system that originally intercepted the action is still
-   waiting, checking the database once a second for a decision. The moment
-   it sees the new status, it does exactly one of three things:
-   - `approved` → runs the **original** risky action for real
-   - `rejected` → runs nothing, logs that nothing happened
-   - `alternative` → runs the **safer** action instead (e.g. actually moves
-     the file to trash, or actually runs the `--force-with-lease` version),
-     and logs the status as `executed-alternative`
-
-**The important safety properties:**
-- The suggested alternative is never trusted automatically and never runs
-  on its own — it only ever executes after an explicit decision, through
-  the exact same waiting/logging mechanism as a normal approval.
-- The safer action is built in code at interception time and held in
-  memory. **Nothing read back from the database is ever executed**, so
-  editing a database row cannot make Checkpoint run a command.
-- `alternative` is only accepted by the database when the action actually
-  has a stored suggestion, and a decision can only be made while the action
-  is still `pending` (no double-click or second request can flip it).
-
----
-
 ## Build phases
 
-This project is built in dependency order — each step produces something
-testable before moving to the next. Checked items are done.
-
-The roadmap is split into two halves — not by counting phases evenly, but
-by what kind of work each half is. **PPT / midterm presentation: 8 Oct** —
-target is to complete all of Half 1 by then.
-
-**Half 1 — the core safety engine, target: 8 Oct**
+**Half 1 — the core safety engine**
 Everything needed for Checkpoint to genuinely intercept, judge, simulate,
 ask, execute, and roll back an action, end to end — plus a safer-alternative
 suggestion option, security hardening, automated tests, and an ML-based
@@ -136,12 +42,11 @@ fallback classifier.
 **Half 2 — intelligence, trust, and polish**
 The more open-ended, research-flavored work: recognizing manipulated
 actions, learning behavior, hooking into a real agent, building the full
-product, and formally proving safety guarantees. Scheduled after the
-midterm, with more runway.
+product, and formally proving safety guarantees.
 
 ---
 
-### HALF 1 — target: 8 Oct
+### HALF 1
 
 ### Phase 1 — Core interception loop ✅ DONE
 - [x] 1. Basic interceptor: logs a shell command, then runs it
@@ -221,94 +126,53 @@ replacing a blind default with an informed prediction.
       `chmod -R 777`, `find -delete` and `git -C ... push --force` are
       handled by the model (result can vary between retrains)
 
-### Phase 2C — Final prep
+### Phase 2C — Final prep ✅ DONE
 - [x] 29. Suggestion feature and security hardening combined into one
       consistent set of files: suggestions stored with the pending action,
       a CSRF-protected "Do this instead" button, and the confirmation gate
       executing the safer action only after an explicit decision
-- [ ] 30. Talking-points script covering everything above for a
-      non-technical evaluator, rehearsed at least once beforehand
-      (script written; rehearsal still to do)
-
-### Known remaining gaps (documented, not hidden)
-Tracked as expected-failure tests so they stay visible:
-- `git push origin feature/maintenance` is over-flagged because the
-  protected-branch check matches the substring `main`
-- File operations: writes to system files (`/etc/hosts`), path traversal on
-  writes (`../outside.txt`), and moves of system files are not yet rated
-  higher
-- `git push --force-with-lease` is still rated HIGH, because the rule
-  matches the word `--force`. The safer command still asks for approval
-- The model is a fallback trained on a small dataset; treat its output on
-  unmatched commands as an informed guess, not a guarantee
 
 ---
 
-### HALF 2 — after the midterm
+### HALF 2
 
 ### Phase 6 — Provenance tracking (prompt-injection defense)
-- [ ] 31. Tag each action's origin: user-typed / agent-internal / external-untrusted
-- [ ] 32. Feed origin tag into the risk classifier
-- [ ] 33. Build a test scenario simulating a prompt-injection attack
+- [ ] 30. Tag each action's origin: user-typed / agent-internal / external-untrusted
+- [ ] 31. Feed origin tag into the risk classifier
+- [ ] 32. Build a test scenario simulating a prompt-injection attack
 
 ### Phase 7 — Anomaly detection
-- [ ] 34. Log a behavioral baseline per session
-- [ ] 35. Simple statistical anomaly scorer
+- [ ] 33. Log a behavioral baseline per session
+- [ ] 34. Simple statistical anomaly scorer
 
 ### Phase 8 — Real agent integration
-- [ ] 36. Hook the interceptor into an actual coding agent, via its native
+- [ ] 35. Hook the interceptor into an actual coding agent, via its native
       hook system (confirmed available for Claude Code, Cursor, and
       Antigravity)
 
 ### Phase 9 — Full product dashboard + packaging
-- [ ] 37. Expand Phase 3's dashboard into the full live-feed + history +
+- [ ] 36. Expand Phase 3's dashboard into the full live-feed + history +
       approvals product view
-- [ ] 38. Package as an installable desktop app (Electron/Tauri)
+- [ ] 37. Package as an installable desktop app (Electron/Tauri)
 
 ### Phase 10 — Formal policy layer
 A small, deliberately named set of 2–3 catastrophic invariants only — not
 applied to every HIGH-risk action. Everything else keeps the normal
 single-click flow; only this tiny named set gets extra protection.
-- [ ] 39. Define the 2–3 critical invariants to protect (candidates: a
+- [ ] 38. Define the 2–3 critical invariants to protect (candidates: a
       destructive git operation on a protected branch; a write/delete
       outside the project's granted scope)
-- [ ] 40. For each one, require a stronger confirmation than a single click
+- [ ] 39. For each one, require a stronger confirmation than a single click
       (e.g. typing the branch name, same pattern GitHub uses for deleting a
       repo) — provably hard to trigger by accident, still fully possible
       for a user who deliberately means it
-- [ ] 41. Model the allowed action sequence as a finite-state system and
+- [ ] 40. Model the allowed action sequence as a finite-state system and
       verify the defined bad states are unreachable except through that
       stronger confirmation path
 
 ### Phase 11 — Polish and final demo prep
-- [ ] 42. Stress-test against real, messier agent sessions
-- [ ] 43. Build 2–3 demo scenarios (safe cleanup, blocked action, caught injection)
-
----
-
-## Midterm presentation plan (8 Oct)
-
-**What we demo live:**
-- A safe action — runs instantly, shows up as "executed," no interruption
-- A risky action — paused, simulated in the sandbox (real outcome shown,
-  not raw syntax), resolved live from the dashboard
-- "Do this instead" on a risky delete or force-push — the safer path runs
-  instead of the dangerous one
-- A rollback — undo a previous action using a saved checkpoint, itself
-  logged and reversible
-- The dashboard itself: plain labels, color-coded risk, readable by someone
-  with zero technical background
-- A command never seen by the hardcoded rules, classified by the trained
-  model
-
-**What we say, not demo:** Half 2 — provenance tracking / prompt-injection
-defense, anomaly detection, real agent hookup, the full product, and formal
-verification — presented as planned next phases with reasoning, not shown
-working yet.
-
-**Demo safety note:** run the interceptor demo from a throwaway scratch git
-repo (no remote), never from a real project, because approving the force-push
-demo runs a real `git push --force`.
+- [ ] 41. Stress-test against real, messier agent sessions
+- [ ] 42. Build 2–3 demo scenarios (safe cleanup, blocked action, caught injection)
 
 ---
 
@@ -376,15 +240,11 @@ python dashboard/app.py        # terminal 1 — leave running (restart it after 
 python core/interceptor.py     # terminal 2 — or core/file_ops.py, or your own test script
 ```
 
-Run the interceptor from a scratch git repo, not a real project (see the
-demo safety note above).
+Run the interceptor from a scratch git repo, not a real project, since
+approving the force-push demo runs a real `git push --force`.
 
 ## Testing
 
 ```bash
 python -m pytest tests/ -v
 ```
-
-Some tests are marked as expected failures (xfail) on purpose: they record
-known gaps. Tests for commands that depend on the trained model are
-non-strict, so they may show as passing or expected-failing after a retrain.
