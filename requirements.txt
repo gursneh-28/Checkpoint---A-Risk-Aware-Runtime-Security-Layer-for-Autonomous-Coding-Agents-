@@ -1,3 +1,6 @@
 flask
 pytest
 scikit-learn
+bashlex
+argon2-cffi
+cryptography

@@ -1,0 +1,13 @@
+{
+  "description": "Simulated PostToolUse event for successful tool completion",
+  "simulated": true,
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "ls -la"
+  },
+  "tool_response": "total 4\ndrwxr-xr-x 1 user group 0 Nov 21 02:00 .\n",
+  "session_id": "sim-session-001",
+  "tool_use_id": "toolu_02SafeCommandLsLa0000000",
+  "cwd": "C:/Projects/demo-repo"
+}

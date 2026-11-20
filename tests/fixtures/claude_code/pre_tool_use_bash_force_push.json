@@ -1,0 +1,15 @@
+{
+  "description": "Simulated PreToolUse event for Bash command (from official Claude Code reference)",
+  "simulated": true,
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git push --force origin main"
+  },
+  "session_id": "sim-session-001",
+  "tool_use_id": "toolu_01AbCdEfGhIjKlMnOpQrStUv",
+  "cwd": "C:/Projects/demo-repo",
+  "environment": {
+    "SHELL": "/usr/bin/bash"
+  }
+}

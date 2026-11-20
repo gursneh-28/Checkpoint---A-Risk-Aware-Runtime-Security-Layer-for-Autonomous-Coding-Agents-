@@ -1,0 +1,13 @@
+{
+  "description": "Simulated PostToolUseFailure event for failed tool execution",
+  "simulated": true,
+  "hook_event_name": "PostToolUseFailure",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git checkout nonexistent-branch"
+  },
+  "error": "error: pathspec 'nonexistent-branch' did not match any file(s) known to git",
+  "session_id": "sim-session-001",
+  "tool_use_id": "toolu_03FailedCommandCheck000",
+  "cwd": "C:/Projects/demo-repo"
+}

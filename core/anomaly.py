@@ -147,18 +147,21 @@ class AnomalyDetector:
                     ),
                 )
 
-        # 4. Unusual time
-        hour = datetime.now().hour
-        if UNUSUAL_HOUR_START <= hour < UNUSUAL_HOUR_END:
-            return AnomalySignal(
-                triggered=True,
-                kind="unusual_time",
-                detail=f"Action at {hour:02d}:00 (outside expected hours)",
-                escalation_reason=(
-                    f"Action submitted at an unusual hour ({hour:02d}:xx). "
-                    "Consider reviewing manually."
-                ),
-            )
+        # 4. Unusual time (disabled in base limits-only mode unless explicitly enabled)
+        # Note: Section 11 of spec specifies: "Unattended activity, as an explicit policy... Banner only by default"
+        # Hardcoded escalation based merely on local clock hour without policy configuration is not compliant with 11a.
+        if getattr(self, "_check_unusual_time", False):
+            hour = datetime.now().hour
+            if UNUSUAL_HOUR_START <= hour < UNUSUAL_HOUR_END:
+                return AnomalySignal(
+                    triggered=True,
+                    kind="unusual_time",
+                    detail=f"Action at {hour:02d}:00 (outside expected hours)",
+                    escalation_reason=(
+                        f"Action submitted at an unusual hour ({hour:02d}:xx). "
+                        "Consider reviewing manually."
+                    ),
+                )
 
         return AnomalySignal(triggered=False)
 

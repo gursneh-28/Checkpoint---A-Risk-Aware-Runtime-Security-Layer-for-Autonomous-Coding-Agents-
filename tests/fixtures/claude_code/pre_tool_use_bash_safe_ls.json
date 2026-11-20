@@ -1,0 +1,12 @@
+{
+  "description": "Simulated PreToolUse event for safe Bash command",
+  "simulated": true,
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "ls -la"
+  },
+  "session_id": "sim-session-001",
+  "tool_use_id": "toolu_02SafeCommandLsLa0000000",
+  "cwd": "C:/Projects/demo-repo"
+}
