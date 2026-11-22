@@ -184,22 +184,30 @@ def resolve(
 
     # --- Provenance escalation ---
     if provenance and provenance.has_untrusted_input:
+        is_strong = (
+            any("url:" in src or "domain:" in src or "package:" in src or "pipe" in src or "script_path:" in src for src in provenance.sources)
+            or "Strong link" in (provenance.escalation_reason or "")
+        )
         for src in provenance.sources:
-            add_reason(
-                f"Untrusted input observed in context: {src}",
-                escalate_to=_tier_max(effective, RiskTier.HIGH)
-                if effective < RiskTier.HIGH else None,
-            )
-        # Only escalate once from provenance (correlated dedup)
-        if effective < RiskTier.HIGH:
-            effective = RiskTier.HIGH
+            add_reason(f"Untrusted input observed in context: {src}")
+
+        if is_strong:
+            # Raise by one tier per v2.3 §543-550
+            if effective == RiskTier.LOW:
+                effective = RiskTier.MEDIUM
+            elif effective == RiskTier.MEDIUM:
+                effective = RiskTier.HIGH
+            elif effective == RiskTier.HIGH:
+                effective = RiskTier.CRITICAL
+            # CRITICAL stays CRITICAL
 
     # --- Anomaly escalation ---
     if anomaly and anomaly.triggered:
-        add_reason(
-            f"Anomaly detected ({anomaly.kind}): {anomaly.detail}",
-            escalate_to=RiskTier.CRITICAL if effective >= RiskTier.HIGH else RiskTier.HIGH,
-        )
+        add_reason(f"Anomaly detected ({anomaly.kind}): {anomaly.detail}")
+        if TIER_ORDER.get(effective, 2) >= TIER_ORDER.get(RiskTier.HIGH, 3):
+            effective = RiskTier.CRITICAL
+        else:
+            effective = RiskTier.HIGH
 
     # --- Confidence / coverage escalation ---
     if classifier_result.parser_coverage in ("unsupported", "unknown"):

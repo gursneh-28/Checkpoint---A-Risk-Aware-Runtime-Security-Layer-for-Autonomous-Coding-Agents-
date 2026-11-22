@@ -91,9 +91,14 @@ def evaluate(event: Event) -> Decision:
                 effective_tier=RiskTier.CRITICAL,
             )
 
-    # Determine tool kind
-    tool_kind = ToolKind(event.tool_name) if event.tool_name in {t.value for t in ToolKind} \
-                else ToolKind.OTHER
+    # Determine tool kind (case-insensitive for Bash)
+    t_name = (event.tool_name or "").strip()
+    if t_name.lower() == "bash":
+        tool_kind = ToolKind.BASH
+    elif t_name in {t.value for t in ToolKind}:
+        tool_kind = ToolKind(t_name)
+    else:
+        tool_kind = ToolKind.OTHER
 
     # Only Bash is covered in v1
     if tool_kind != ToolKind.BASH:
@@ -122,8 +127,17 @@ def evaluate(event: Event) -> Decision:
     classifier_result = classify_risk_full(command)
 
     # 2. Provenance
-    provenance.record_event(event)
-    prov_signal = provenance.get_signal(event)
+    if event.session_id:
+        prov_signal = provenance.evaluate_action_provenance(
+            action_id=0,
+            command=command,
+            session_id=event.session_id,
+            base_tier=classifier_result.base_tier,
+            tool_use_id=event.tool_use_id,
+        )
+    else:
+        provenance.record_event(event)
+        prov_signal = provenance.get_signal(event)
 
     # 3. Policy resolve (first pass, without anomaly)
     resolution = resolve(

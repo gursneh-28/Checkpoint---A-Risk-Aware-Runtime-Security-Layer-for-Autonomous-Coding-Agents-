@@ -232,6 +232,38 @@ def init_db():
             delivered_at    TEXT
         );
 
+        CREATE TABLE IF NOT EXISTS context_ingestions (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            ingestion_id        TEXT UNIQUE NOT NULL,
+            session_id          TEXT NOT NULL,
+            prompt_id           TEXT,
+            agent_id            TEXT,
+            tool_use_id         TEXT,
+            event_type          TEXT NOT NULL,
+            source_kind         TEXT NOT NULL,
+            source_ref          TEXT,
+            trust_level         TEXT NOT NULL,
+            trust_basis         TEXT,
+            content_hash        TEXT NOT NULL,
+            extracted_entities  TEXT,
+            redacted_excerpt    TEXT,
+            capture_status      TEXT NOT NULL DEFAULT 'captured',
+            normalizer_version  TEXT NOT NULL DEFAULT '1',
+            timestamp           TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS action_provenance_evidence (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            action_id           INTEGER NOT NULL REFERENCES actions(id),
+            ingestion_id        TEXT NOT NULL,
+            evidence_type       TEXT NOT NULL,
+            matched_entity_type TEXT NOT NULL,
+            matched_entity_val  TEXT NOT NULL,
+            strength            TEXT NOT NULL,
+            matcher_version     TEXT NOT NULL DEFAULT '1',
+            created_at          TEXT NOT NULL
+        );
+
         COMMIT;
         """)
 
@@ -254,6 +286,8 @@ def _upgrade_schema():
             ("backup_hash",    "TEXT"),
             ("policy_version", "TEXT DEFAULT '1'"),
             ("cwd",            "TEXT DEFAULT ''"),
+            ("provenance_summary",  "TEXT"),
+            ("provenance_coverage", "TEXT DEFAULT 'unknown'"),
         ],
         "action_events": [
             ("journal_event_id",   "TEXT"),
@@ -921,6 +955,7 @@ def _get_action_columns() -> List[str]:
         "status", "output", "suggestion", "tool_use_id", "session_id",
         "base_tier", "effective_tier", "preview_hash", "manifest_hash",
         "backup_hash", "policy_version", "cwd",
+        "provenance_summary", "provenance_coverage",
     ]
 
 
