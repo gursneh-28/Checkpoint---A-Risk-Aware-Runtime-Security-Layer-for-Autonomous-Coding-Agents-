@@ -7,28 +7,29 @@ Checkpoint is an independent runtime security layer designed to intercept tool, 
 
 ## Current Project Status
 
-- **Development Stage:** Application Feature Implementation Complete (Milestones 1, 2, 3, and 4 Complete).
-- **Test Suite Status:** **154 tests passing (148 passed, 6 xpassed, 0 failed)** across all unit, classification, storage, version control, audit journal, git safety, preview, impact, anomaly, feedback, alert, and export tests.
-- **Current Completed Baseline:** Milestones 1, 2, 3, & 4 (**Storage, Recovery, Previews, Impact, Safeguards, Anomaly Circuit Breaker, Operational Dashboard, Feedback, Alerts, and Audit Export**) are fully implemented and tested.
+- **Development Stage:** All pre-Milestone 5 audit tasks complete (Tasks A–E). All 16 application features implemented and tested.
+- **Test Suite Status:** **179 tests passing (179 passed, 0 failed, 0 xpass)** across authentication, storage, version control, audit journal, git safety, preview, impact, anomaly, provenance, feedback, alert, notifications, expiry, and export.
+- **Current Completed Baseline:** Milestones 1–4 + post-audit Tasks A–E (**Dashboard Auth, Provenance, Approval Expiry Daemon, Live SSE Notifications, Classifier hardening**) are fully implemented and tested.
 - **Next Milestone Task:** Milestone 5 (**Host-Level Security Integration & Live Agent Verification**).
 
 ### What is Implemented vs. Simulated vs. Deferred
 
 | Component | Status | Details |
 |---|---|---|
-| **Risk Classification & AST Parsing** | ✅ Genuinely Implemented | Rules-first pipeline, ML model fallback, and `bashlex` AST parser adapter (`core/parser_adapter.py`) with support matrix coverage categories. |
+| **Risk Classification & AST Parsing** | ✅ Genuinely Implemented | Rules-first pipeline, ML model fallback, `bashlex` AST parser adapter (`core/parser_adapter.py`), deterministic `find ... -delete` and `git clean` rules. |
 | **Blob Store & Version Control (Task 1.1)** | ✅ Genuinely Implemented | SHA-256 sharded compressed blob store (`core/blob_store.py`), 50 MB file limit, conflict detection, staged restore, Option A 2 GB shared quota accounting, and 30-day retention with pin protection (`core/version_control.py`). |
 | **Durable Audit Journal (Task 1.2)** | ✅ Genuinely Implemented | Write-ahead drop-folder ingestion (`storage/journal.py`), append-only global hash chain, sequence buffering, late event absorption, acyclic tombstone redaction, and chain-head anchoring. |
 | **Git Safety Net (Task 1.3)** | ✅ Genuinely Implemented | Bare external backups (`core/git_safety.py`), staged/unstaged patches, untracked files, full bundle verification, destructive command coverage matrix, and safe environment isolation. |
-| **Previews & Impact Analysis (Milestone 2)** | ✅ Genuinely Implemented | Blast radius modeling, deterministic `preview_hash`, target state fingerprint validation, composite safety scoring (0-100), and typed "YES" confirmation gate for CRITICAL actions. |
-| **Anomaly Circuit Breaker (Milestone 3)** | ✅ Genuinely Implemented | High-risk burst detection ($\ge 5$ in 60s), repeated rejection trip ($\ge 3$), low quota breaker (< 5%), and unconditional "paused means paused" pipeline blocking. |
+| **Previews & Impact Analysis (Milestone 2)** | ✅ Genuinely Implemented | Blast radius modeling, deterministic `preview_hash`, target state fingerprint validation, composite safety scoring (0–100), and typed "YES" confirmation gate for CRITICAL actions. |
+| **Anomaly Circuit Breaker (Milestone 3)** | ✅ Genuinely Implemented | High-risk burst detection (≥5 in 60s), repeated rejection trip (≥3), low quota breaker (<5%), and unconditional "paused means paused" pipeline blocking. |
+| **Dashboard Auth (Task A)** | ✅ Genuinely Implemented | Argon2id password hashing, persistent session tokens, login rate limiting, strict Host/Origin validation, hook credential restriction (cannot approve), CRITICAL approvals gated on OS isolation (`core/auth.py`). |
+| **Provenance (Task B / Feature 10)** | ✅ Genuinely Implemented | `context_ingestions` + `action_provenance_evidence` tables, deterministic entity matching with stop-list, trust level classification, synchronous risk escalation in pipeline (`core/provenance.py`). |
+| **Approval Expiry Daemon (Task C)** | ✅ Genuinely Implemented | Authoritative 300-second expiry window in `decide_action()`, active background sweep daemon (`core/expiry_daemon.py`), `approval_expired` journal events, restart-safe initial sweep, timeout alerts. |
+| **Live SSE Dashboard (Task D)** | ✅ Genuinely Implemented | `/events` Server-Sent Events endpoint, deduplication by `(action_id, event_type)`, resynchronization via `Last-Event-ID`, browser Notification API integration, privacy-safe command scrubbing including `curl -u` credential patterns. |
 | **Feedback & Wrong-Rating Queue (Milestone 4)** | ✅ Genuinely Implemented | User flagging, review queue, journaled reviews, calibration dataset export, and immutable historical decisions (`storage/db.py`, `dashboard/app.py`). |
-| **Alerts & Notifications (Milestone 4)** | ✅ Genuinely Implemented | Standardized webhook payload formatting, rate-limited desktop notifications (3.0s minimum interval), and DB delivery tracking (`core/alerts.py`). |
 | **Session Summaries & Audit Export (Milestone 4)** | ✅ Genuinely Implemented | Multi-metric session summaries (JSON and Markdown), and universal audit log export with strict CSV Formula Injection defense (CWE-1236) (`core/session_summary.py`, `storage/export.py`). |
-| **Safer Alternatives & Trash** | ✅ Genuinely Implemented | Safer command rewriting (e.g. `git push --force` → `--force-with-lease`, `git reset --hard` → `git stash`, recoverable soft delete to trash). |
-| **Confirmation Gate & Operational Dashboard** | ✅ Genuinely Implemented | CSRF-protected Flask dashboard, idempotent action decision state transitions (Approve / Reject / Alternative), flags queue, alerts, session summaries, and export routes. |
-| **Claude Code Interceptor Hooks** | ⚠️ Simulated / Contract Ready | Contract adapter implemented (`core/claude_code_adapter.py`) and verified against official Claude Code hook JSON fixtures. Live interception is **blocked/deferred** awaiting Claude Code installation on this host. |
-| **Host-Level OS Account & ACL Isolation** | ⚠️ Deliberately Deferred | `CheckpointSvc` Windows service account, NTFS ACL isolation, and DPAPI service-profile encryption are deferred to the final Security Integration phase to prioritize complete application functionality first. |
+| **Claude Code Interceptor Hooks** | ⚠️ Simulated / Contract Ready | Contract adapter implemented (`core/claude_code_adapter.py`) and verified against official Claude Code hook JSON fixtures. Live interception is **deliberately deferred** awaiting Claude Code installation on this host. |
+| **Host-Level OS Account & ACL Isolation** | ⚠️ Deliberately Deferred | `CheckpointSvc` Windows service account, NTFS ACL isolation, and DPAPI service-profile encryption are deferred to the final Security Integration phase. |
 
 ---
 
@@ -56,7 +57,7 @@ Status definitions:
 | **12** | **Anomaly Detection & Circuit Breaker** | ✅ DONE | `core/anomaly.py`: High-risk burst detection ($\ge 5$ in 60s), repeated rejection trip ($\ge 3$), low quota breaker (< 5%), and session-level "paused means paused" pipeline blocking. |
 | **13** | **Git Safety Net** | ✅ DONE | `core/git_safety.py`: Bare external backup store under `%LOCALAPPDATA%\Checkpoint\git-backups\`, separate staged/unstaged patches and untracked files, verified git bundle (--all), destructive command coverage matrix, hard-deny for gc/prune, and conflict-aware restore engine. |
 | **14** | **Feedback & Wrong-Rating Queue** | ✅ DONE | `storage/db.py` & `dashboard/app.py`: Flagging mechanism, review queue API, resolution tracking, calibration dataset export, and immutable historical decisions. |
-| **15** | **Alerts & Notifications** | ✅ DONE | `core/alerts.py`: Standardized webhook formatting, rate-limited desktop notifications (3s interval), multi-channel delivery dispatch, and status tracking in `alerts` table. |
+| **15** | **Alerts & Notifications** | ✅ DONE | `core/alerts.py` + `core/expiry_daemon.py`: Approval expiry daemon (300s authoritative window, restart-safe), live SSE `/events` endpoint with `Last-Event-ID` resynchronization, deduplication by `(action_id, event_type)`, browser Notification API, and multi-channel DB tracking. |
 | **16** | **Session Summaries, Audit Export & Dashboard** | ✅ DONE | `core/session_summary.py` & `storage/export.py`: Multi-metric session summaries (JSON and Markdown), audit export with strict CSV Formula Injection defense (CWE-1236), and expanded dashboard endpoints. |
 
 ---
@@ -70,6 +71,7 @@ Status definitions:
 - [x] **Milestone 2: Previews, Impact Analysis & Approval Safeguards** (Features 5, 9, 10, 11) — **COMPLETED & TESTED**
 - [x] **Milestone 3: Intelligent Runtime Safety & Anomaly Detection** (Feature 12) — **COMPLETED & TESTED**
 - [x] **Milestone 4: Operational Dashboard, Provenance, Feedback & Export** (Features 14, 15, 16) — **COMPLETED & TESTED**
+- [x] **Post-Audit Tasks A–E** (Dashboard Auth, Provenance Architecture, Approval Expiry Daemon, Live SSE Notifications, Classifier hardening) — **COMPLETED & TESTED**
 - [ ] **Milestone 5: Host-Level Security Integration & Live Agent Verification** (Phase 0 / Phase 1 OS boundaries and Claude Code installation)
 
 ---
@@ -79,12 +81,14 @@ Status definitions:
 ```
 checkpoint/
 ├── core/
-│   ├── alerts.py              # Webhook formatting, desktop rate-limiting & alert delivery
+│   ├── alerts.py              # Webhook formatting, desktop rate-limiting, timeout dispatch
 │   ├── anomaly.py             # Rule-based anomaly detection & circuit breaker
+│   ├── auth.py                # Argon2id auth, session management, Host/Origin validation
 │   ├── blob_store.py          # SHA-256 sharded compressed blob store (50 MB cap)
 │   ├── claude_code_adapter.py # Claude Code hook client contract & JSON serialization
 │   ├── confirmation.py        # Confirmation gate for interactive approval
 │   ├── event_types.py         # Shared Event, Decision, RiskTier, and state data contracts
+│   ├── expiry_daemon.py       # Background approval expiry worker (300s authoritative window)
 │   ├── file_ops.py            # Intercepted file operations
 │   ├── git_safety.py          # Git safety net & backup operations
 │   ├── impact_report.py       # Impact analysis and blast radius modeling
@@ -104,8 +108,8 @@ checkpoint/
 │   ├── suggestions.py         # Safer alternative command suggestions & trash
 │   └── version_control.py     # Snapshotting, staged restore, conflict detection, Option A quota
 ├── dashboard/
-│   ├── app.py                 # Flask web dashboard with CSRF protection, flags, summaries, exports
-│   └── templates/             # Dashboard HTML views
+│   ├── app.py                 # Flask web dashboard with CSRF, auth, SSE /events, flags, summaries, exports
+│   └── templates/             # Dashboard HTML views (live SSE + browser notifications)
 ├── docs/
 │   ├── Checkpoint_Synopsis.docx
 │   └── threat_model.md        # Comprehensive 6-vector threat model
@@ -117,19 +121,23 @@ checkpoint/
 │   └── trash/                 # Soft-delete recoverable trash directory
 ├── tests/
 │   ├── fixtures/claude_code/  # Official Claude Code hook JSON payloads for testing
+│   ├── test_auth.py           # Tests for Argon2id auth, sessions, rate limiting, Host/Origin
 │   ├── test_blob_store.py     # Tests for content-addressed blob store
 │   ├── test_claude_code_adapter.py # Tests for hook adapter contracts
 │   ├── test_confirmation.py   # Tests for confirmation gate
 │   ├── test_dashboard.py      # Tests for web dashboard
 │   ├── test_db.py             # Tests for database operations
 │   ├── test_db_suggestions.py # Tests for suggestion persistence
+│   ├── test_expiry.py         # Tests for server-side approval expiry daemon
 │   ├── test_git_safety.py     # Tests for git safety net & external backup store
 │   ├── test_journal.py        # Tests for durable audit journal & hash chain
 │   ├── test_milestone2.py     # Tests for previews, impact, blast radius & typed approvals
 │   ├── test_milestone3.py     # Tests for anomaly circuit breakers & pause enforcement
 │   ├── test_milestone4.py     # Tests for feedback queue, alerts, summaries & export
 │   ├── test_ml_classifier.py  # Tests for ML fallback classifier
+│   ├── test_notifications.py  # Tests for live SSE, resynchronization, browser notifications
 │   ├── test_parser_adapter.py # Tests for bashlex AST parsing
+│   ├── test_provenance.py     # Tests for persistent provenance architecture
 │   ├── test_risk_classifier.py# Golden table risk classification tests
 │   ├── test_sandbox.py        # Tests for shadow-copying and diffs
 │   ├── test_suggestions.py    # Tests for safer alternatives and trash
