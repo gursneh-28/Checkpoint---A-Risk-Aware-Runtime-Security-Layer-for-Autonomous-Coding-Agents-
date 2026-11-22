@@ -18,6 +18,11 @@ def client(tmp_path, monkeypatch):
     app.config["TESTING"] = True
     
     with app.test_client() as client:
+        from core.auth import create_session
+        token = create_session("admin")
+        with client.session_transaction() as sess:
+            sess["session_token"] = token
+            sess["username"] = "admin"
         yield client
 
 def create_pending_action():

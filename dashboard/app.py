@@ -2,6 +2,7 @@ import sys
 import os
 import secrets
 import json
+from functools import wraps
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -21,11 +22,49 @@ from storage.db import (
 from core.sandbox import rollback_checkpoint
 from core.session_summary import generate_session_summary, format_session_summary_markdown
 from storage.export import export_audit_log
+from core.auth import (
+    get_signing_key,
+    rotate_signing_key,
+    validate_request_host,
+    validate_request_origin,
+    verify_user,
+    create_session,
+    validate_session,
+    invalidate_session,
+    invalidate_all_sessions_for_user,
+    check_login_rate_limit,
+    reset_login_rate_limit,
+    can_approve_critical,
+    init_auth_tables,
+)
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(32)
+# Persistent signing key stored outside project repository
+app.secret_key = get_signing_key()
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Strict"
+
+
+# ---------------------------------------------------------------------------
+# Host and Origin Validation (DNS rebinding and Cross-Site defense)
+# ---------------------------------------------------------------------------
+
+@app.before_request
+def validate_security_headers():
+    # 1. Strict Host validation
+    if not validate_request_host(request.host):
+        abort(400, description="Invalid Host header")
+
+    # 2. Strict Origin/Referer validation for mutating requests
+    if request.method in ("POST", "PUT", "DELETE", "PATCH"):
+        origin = request.headers.get("Origin") or request.headers.get("Referer")
+        if origin and not validate_request_origin(origin):
+            abort(403, description="Invalid Origin or Referer")
+
+
+# ---------------------------------------------------------------------------
+# CSRF and Session Authentication
+# ---------------------------------------------------------------------------
 
 def get_csrf_token():
     if "csrf_token" not in session:
@@ -43,7 +82,86 @@ def check_csrf():
         abort(403)
 
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if app.config.get("LOGIN_DISABLED"):
+            return f(*args, **kwargs)
+        token = session.get("session_token")
+        username = validate_session(token)
+        if not username:
+            if request.path.startswith(("/action/", "/session/", "/export", "/flags", "/alerts", "/resolve", "/rollback")):
+                return jsonify({"error": "Unauthorized. Please log in."}), 401
+            return redirect(url_for("login_view", next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def check_hook_token_not_approving():
+    """Ensure agent hook credentials CANNOT approve or modify actions."""
+    hook_token = request.headers.get("X-Checkpoint-Hook-Token")
+    if hook_token:
+        abort(403, description="Hook credentials are strictly forbidden from approving or resolving actions")
+
+
+# ---------------------------------------------------------------------------
+# Authentication Endpoints
+# ---------------------------------------------------------------------------
+
+@app.route("/login", methods=["GET", "POST"])
+def login_view():
+    init_auth_tables()
+    if request.method == "GET":
+        return render_template("login.html", error=None)
+
+    client_ip = request.remote_addr or "127.0.0.1"
+    if not check_login_rate_limit(client_ip):
+        abort(429, description="Too many login attempts. Please wait 60 seconds.")
+
+    check_csrf()
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "")
+
+    if not verify_user(username, password):
+        return render_template("login.html", error="Invalid username or password"), 401
+
+    reset_login_rate_limit(client_ip)
+    token = create_session(username)
+    session["session_token"] = token
+    session["username"] = username
+    next_url = request.args.get("next") or url_for("dashboard")
+    return redirect(next_url)
+
+
+@app.route("/logout", methods=["POST"])
+def logout_view():
+    check_csrf()
+    token = session.get("session_token")
+    if token:
+        invalidate_session(token)
+    session.clear()
+    return redirect(url_for("login_view"))
+
+
+@app.route("/rotate-key", methods=["POST"])
+@login_required
+def rotate_key_view():
+    check_csrf()
+    new_key = rotate_signing_key()
+    app.secret_key = new_key
+    username = session.get("username")
+    if username:
+        invalidate_all_sessions_for_user(username)
+    session.clear()
+    return jsonify({"success": True, "message": "Signing key rotated successfully. Please log in again."})
+
+
+# ---------------------------------------------------------------------------
+# Main Dashboard & Resolution
+# ---------------------------------------------------------------------------
+
 @app.route("/")
+@login_required
 def dashboard():
     init_db()
     raw_rows = get_all_actions()
@@ -62,10 +180,25 @@ DECISIONS = {"approve": "approved", "reject": "rejected", "alternative": "altern
 
 
 @app.route("/resolve/<int:action_id>/<decision>", methods=["POST"])
+@login_required
 def resolve(action_id, decision):
+    check_hook_token_not_approving()
     check_csrf()
     if decision not in DECISIONS:
         abort(400)
+
+    # Check CRITICAL tier approval restriction
+    if decision == "approve":
+        actions = get_all_actions()
+        action_row = next((r for r in actions if r[0] == action_id), None)
+        if action_row:
+            eff = action_row[11] if len(action_row) > 11 else ""
+            base = action_row[4] if len(action_row) > 4 else ""
+            if eff == "CRITICAL" or base == "CRITICAL":
+                allowed, reason = can_approve_critical()
+                if not allowed:
+                    abort(403, description=reason)
+
     typed = request.form.get("typed_confirmation")
     success = decide_action(action_id, DECISIONS[decision], typed_confirmation=typed)
     if not success and decision == "approve":
