@@ -208,21 +208,28 @@ def init_db():
         );
 
         CREATE TABLE IF NOT EXISTS flag_events (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            action_id   INTEGER NOT NULL REFERENCES actions(id),
-            timestamp   TEXT NOT NULL,
-            reason      TEXT NOT NULL,
-            correct_tier TEXT,
-            notes       TEXT,
-            reviewed    INTEGER DEFAULT 0
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            action_id       INTEGER NOT NULL REFERENCES actions(id),
+            timestamp       TEXT NOT NULL,
+            reason          TEXT NOT NULL,
+            correct_tier    TEXT,
+            notes           TEXT,
+            reviewed        INTEGER DEFAULT 0,
+            resolution      TEXT DEFAULT 'pending',
+            reviewer_notes  TEXT,
+            resolved_at     TEXT
         );
 
         CREATE TABLE IF NOT EXISTS alerts (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            action_id   INTEGER NOT NULL REFERENCES actions(id),
-            timestamp   TEXT NOT NULL,
-            kind        TEXT NOT NULL,
-            delivered   INTEGER DEFAULT 0
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            action_id       INTEGER NOT NULL REFERENCES actions(id),
+            timestamp       TEXT NOT NULL,
+            kind            TEXT NOT NULL,
+            channel         TEXT DEFAULT 'webhook',
+            status          TEXT DEFAULT 'pending',
+            payload         TEXT,
+            delivered       INTEGER DEFAULT 0,
+            delivered_at    TEXT
         );
 
         COMMIT;
@@ -260,6 +267,17 @@ def _upgrade_schema():
             ("tombstone_event_id", "INTEGER REFERENCES action_events(id)"),
             ("redacted_at",        "TEXT"),
             ("redaction_reason",   "TEXT"),
+        ],
+        "flag_events": [
+            ("resolution",     "TEXT DEFAULT 'pending'"),
+            ("reviewer_notes", "TEXT"),
+            ("resolved_at",    "TEXT"),
+        ],
+        "alerts": [
+            ("channel",      "TEXT DEFAULT 'webhook'"),
+            ("status",       "TEXT DEFAULT 'pending'"),
+            ("payload",      "TEXT"),
+            ("delivered_at", "TEXT"),
         ]
     }
     with _connect() as conn:
@@ -575,17 +593,167 @@ def flag_action(action_id: int, reason: str, correct_tier: str = "",
         """, (action_id, ts, reason, correct_tier, notes))
         flag_id = cur.lastrowid
         _append_event(conn, action_id, "flagged",
-                      {"reason": reason, "correct_tier": correct_tier})
+                      {"reason": reason, "correct_tier": correct_tier, "flag_id": flag_id})
         conn.execute("COMMIT")
     return flag_id
 
 
-def create_alert(action_id: int, kind: str = "pending_approval"):
-    """Feature 15: create a pending approval alert."""
+def list_flagged_actions(unreviewed_only: bool = True) -> List[Dict[str, Any]]:
+    """Feature 14: list flagged actions with full review details."""
+    query = """
+        SELECT f.id, f.action_id, f.timestamp, f.reason, f.correct_tier, f.notes,
+               f.reviewed, f.resolution, f.reviewer_notes, f.resolved_at,
+               a.command, a.risk_tier, a.status, a.session_id, a.tool_use_id
+        FROM flag_events f
+        JOIN actions a ON f.action_id = a.id
+    """
+    if unreviewed_only:
+        query += " WHERE f.reviewed = 0"
+    query += " ORDER BY f.id DESC"
+    with _connect() as conn:
+        cur = conn.execute(query)
+        rows = cur.fetchall()
+        result = []
+        for r in rows:
+            result.append({
+                "flag_id": r[0],
+                "action_id": r[1],
+                "timestamp": r[2],
+                "reason": r[3],
+                "correct_tier": r[4],
+                "notes": r[5],
+                "reviewed": bool(r[6]),
+                "resolution": r[7],
+                "reviewer_notes": r[8],
+                "resolved_at": r[9],
+                "command": r[10],
+                "risk_tier": r[11],
+                "action_status": r[12],
+                "session_id": r[13],
+                "tool_use_id": r[14],
+            })
+        return result
+
+
+def review_flag(flag_id: int, resolution: str, corrected_tier: Optional[str] = None,
+                reviewer_notes: str = "") -> bool:
+    """
+    Feature 14: review a flagged action.
+    Resolution must be one of: 'reviewed_approved', 'reviewed_rejected', 'approved', 'rejected'.
+    IMPORTANT: This never alters the original action's decision or executed history.
+    """
+    valid_resolutions = {"reviewed_approved", "reviewed_rejected", "approved", "rejected"}
+    if resolution not in valid_resolutions:
+        raise ValueError(f"Invalid resolution: {resolution}. Must be in {valid_resolutions}")
+
+    norm_resolution = "reviewed_approved" if "approved" in resolution else "reviewed_rejected"
+    ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    with _connect() as conn:
+        conn.execute("BEGIN")
+        row = conn.execute("SELECT action_id, correct_tier FROM flag_events WHERE id=?", (flag_id,)).fetchone()
+        if not row:
+            conn.execute("ROLLBACK")
+            return False
+        action_id, existing_tier = row
+        final_tier = corrected_tier if corrected_tier else existing_tier
+
+        conn.execute("""
+            UPDATE flag_events
+            SET reviewed = 1, resolution = ?, reviewer_notes = ?, resolved_at = ?, correct_tier = ?
+            WHERE id = ?
+        """, (norm_resolution, reviewer_notes, ts, final_tier, flag_id))
+
+        _append_event(conn, action_id, "flag_reviewed", {
+            "flag_id": flag_id,
+            "resolution": norm_resolution,
+            "corrected_tier": final_tier,
+            "reviewer_notes": reviewer_notes,
+        })
+        conn.execute("COMMIT")
+        return True
+
+
+def export_flagged_dataset() -> List[Dict[str, Any]]:
+    """Feature 14: export reviewed flags as labeled calibration dataset."""
+    with _connect() as conn:
+        cur = conn.execute("""
+            SELECT f.id, a.command, f.correct_tier, a.risk_tier, f.reason, f.reviewer_notes, f.resolved_at
+            FROM flag_events f
+            JOIN actions a ON f.action_id = a.id
+            WHERE f.reviewed = 1 AND f.resolution = 'reviewed_approved'
+            ORDER BY f.id ASC
+        """)
+        return [
+            {
+                "flag_id": r[0],
+                "command": r[1],
+                "labeled_tier": r[2] if r[2] else r[3],
+                "original_tier": r[3],
+                "user_reason": r[4],
+                "reviewer_notes": r[5],
+                "resolved_at": r[6],
+            }
+            for r in cur.fetchall()
+        ]
+
+
+def create_alert(action_id: int, kind: str = "pending_approval",
+                 channel: str = "webhook", payload: Optional[str] = None) -> int:
+    """Feature 15: create an alert entry."""
     ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
     with _connect() as conn:
-        conn.execute("INSERT INTO alerts (action_id, timestamp, kind) VALUES (?, ?, ?)",
-                     (action_id, ts, kind))
+        cur = conn.execute("""
+            INSERT INTO alerts (action_id, timestamp, kind, channel, status, payload, delivered)
+            VALUES (?, ?, ?, ?, 'pending', ?, 0)
+        """, (action_id, ts, kind, channel, payload))
+        return cur.lastrowid
+
+
+def get_alerts(pending_only: bool = False, limit: int = 50) -> List[Dict[str, Any]]:
+    """Feature 15: fetch alerts."""
+    query = """
+        SELECT al.id, al.action_id, al.timestamp, al.kind, al.channel, al.status, al.payload, al.delivered, al.delivered_at,
+               a.command, a.risk_tier, a.session_id
+        FROM alerts al
+        LEFT JOIN actions a ON al.action_id = a.id
+    """
+    if pending_only:
+        query += " WHERE al.delivered = 0 AND al.status = 'pending'"
+    query += f" ORDER BY al.id DESC LIMIT {int(limit)}"
+    with _connect() as conn:
+        cur = conn.execute(query)
+        rows = cur.fetchall()
+        return [
+            {
+                "alert_id": r[0],
+                "action_id": r[1],
+                "timestamp": r[2],
+                "kind": r[3],
+                "channel": r[4],
+                "status": r[5],
+                "payload": r[6],
+                "delivered": bool(r[7]),
+                "delivered_at": r[8],
+                "command": r[9],
+                "risk_tier": r[10],
+                "session_id": r[11],
+            }
+            for r in rows
+        ]
+
+
+def update_alert_status(alert_id: int, status: str, delivered_at: Optional[str] = None) -> bool:
+    """Feature 15: update alert delivery status."""
+    ts = delivered_at or datetime.datetime.now(datetime.timezone.utc).isoformat()
+    delivered_val = 1 if status == "delivered" else 0
+    with _connect() as conn:
+        cur = conn.execute("""
+            UPDATE alerts
+            SET status = ?, delivered = ?, delivered_at = ?
+            WHERE id = ?
+        """, (status, delivered_val, ts, alert_id))
+        return cur.rowcount > 0
 
 
 # ---------------------------------------------------------------------------

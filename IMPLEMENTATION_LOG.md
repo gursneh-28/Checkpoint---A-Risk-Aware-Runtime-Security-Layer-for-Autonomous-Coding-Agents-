@@ -207,3 +207,50 @@
    - Executed full test suite across entire repository: **145 tests collected: 139 passed, 6 xpassed, 0 failed**.
    - Pass rate: 100%. Test runtime: ~33.3 seconds.
    - Milestone 3 (**Intelligent Runtime Safety & Anomaly Detection**) is 100% complete.
+
+---
+
+## Session 7 — 2026-11-22: Milestone 4 Implementation (Operational Dashboard, Feedback, Alerts & Export)
+
+### User Guidance Received
+- Continue autonomous implementation roadmap according to v2.3 specification.
+- Implement Milestone 4 covering Features 14, 15, and 16.
+- Ensure strict CSV formula-injection defense (CWE-1236) and immutable audit log guarantees.
+
+### Completed Work
+
+1. **Feedback & Wrong-Rating Queue (`storage/db.py` & `dashboard/app.py`, Feature 14)**
+   - Enhanced `flag_events` schema with resolution tracking: `resolution` ('reviewed_approved' / 'reviewed_rejected'), `reviewer_notes`, and `resolved_at`.
+   - Implemented `list_flagged_actions(unreviewed_only=True)` to populate review queue.
+   - Implemented `review_flag()` with resolution validation and audit trail journaling (`flag_reviewed` event).
+   - Invariant verified: reviewing or flagging an action never retroactively alters the original executed record or status.
+   - Implemented `export_flagged_dataset()` to export reviewed flags as labeled calibration datasets for classifier refinement.
+   - Added dashboard endpoints: `/flag/<action_id>`, `/flags`, `/flags/<flag_id>/resolve`, `/flags/export`.
+
+2. **Alerts & Notifications Pipeline (`core/alerts.py`, `storage/db.py`, `dashboard/app.py`, Feature 15)**
+   - Enhanced `alerts` schema with `channel` ('webhook' / 'desktop'), `status`, `payload`, and `delivered_at`.
+   - Implemented `format_webhook_payload()` producing standardized JSON approval notifications with direct dashboard resolution links.
+   - Implemented `DesktopNotifier` with monotonic rate-limiting (`min_interval_seconds=3.0s`) to prevent notification storms during high-frequency agent actions.
+   - Implemented `dispatch_alerts()` coordinating multi-channel delivery and updating DB delivery states.
+   - Added `/alerts` dashboard endpoint.
+
+3. **Session Summaries & Audit Log Export (`core/session_summary.py`, `storage/export.py`, `dashboard/app.py`, Feature 16)**
+   - Implemented `generate_session_summary(session_id)` aggregating total actions, tier breakdowns, outcome distribution, snapshots, git backups, duration, and safety ratings.
+   - Implemented `format_session_summary_markdown()` rendering GitHub-style Markdown summaries with tables and alert callouts.
+   - Implemented `storage/export.py` with strict CSV Formula-Injection defense (`sanitize_csv_cell` against `=`, `+`, `-`, `@`, `\t`, `\r` per CWE-1236).
+   - Added dashboard endpoints: `/session/<session_id>/summary` (JSON and Markdown formats) and `/export` (`format=json` and `format=csv`).
+
+4. **Testing & Verification (`tests/test_milestone4.py`)**
+   - Authored unit test suite in `tests/test_milestone4.py` (9 tests, all passed):
+     - `test_flag_action_and_review_workflow`: tests flagging, review, audit trail, and dataset export.
+     - `test_webhook_payload_formatting`: tests webhook structure and links.
+     - `test_desktop_notifier_rate_limiting`: verifies immediate second notification is throttled.
+     - `test_dispatch_alerts`: verifies dual-channel dispatch and alert row status tracking.
+     - `test_session_summary_generation`: verifies metric aggregation and Markdown rendering.
+     - `test_csv_formula_injection_defense`: tests neutralization of formula injection payloads.
+     - `test_audit_log_export_json_and_csv`: tests JSON and CSV file generation with sanitization.
+     - `test_dashboard_flags_endpoints`: integration test of flag review web routes.
+     - `test_dashboard_export_and_summary_endpoints`: integration test of summary and export endpoints.
+   - Executed full test suite across entire repository: **154 tests collected: 148 passed, 6 xpassed, 0 failed**.
+   - Pass rate: 100%. Test runtime: ~16.3 seconds.
+   - Milestone 4 (**Operational Dashboard, Provenance, Feedback & Export**) is 100% complete.

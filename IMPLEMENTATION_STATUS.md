@@ -179,10 +179,46 @@
 
 ---
 
+## Feature 14 — Feedback & Wrong-Rating Queue
+
+| Sub-feature | Status | Notes |
+|------------|--------|-------|
+| Flag action rating | ✅ DONE | `storage/db.py`: `flag_action()` records user flag and reasons |
+| Review queue & audit trail | ✅ DONE | `list_flagged_actions()` and `review_flag()` with journaled `flag_reviewed` events |
+| Immutable action history | ✅ DONE | Verified: flagging never retroactively alters executed action decisions |
+| Labeled calibration dataset export | ✅ DONE | `export_flagged_dataset()` exports approved feedback for classifier tuning |
+| Web review endpoints | ✅ DONE | `/flag/<id>`, `/flags`, `/flags/<id>/resolve`, `/flags/export` in `dashboard/app.py` |
+
+---
+
+## Feature 15 — Alerts & Notifications
+
+| Sub-feature | Status | Notes |
+|------------|--------|-------|
+| Webhook payload formatting | ✅ DONE | `core/alerts.py`: `format_webhook_payload()` generates standardized approval alerts |
+| Rate-limited desktop notifier | ✅ DONE | `DesktopNotifier` with monotonic rate limiting prevents alert storms |
+| Multi-channel alert dispatch | ✅ DONE | `dispatch_alerts()` supports webhook and desktop with status tracking |
+| Alert tracking schema | ✅ DONE | `alerts` table tracks channel, delivery status, and timestamps |
+| Web alert history endpoint | ✅ DONE | `/alerts` endpoint in `dashboard/app.py` |
+
+---
+
+## Feature 16 — Session Summaries, Audit Export & Dashboard
+
+| Sub-feature | Status | Notes |
+|------------|--------|-------|
+| Aggregated session metrics | ✅ DONE | `core/session_summary.py`: `generate_session_summary()` computes tier/outcome/snapshot counts |
+| Formatted Markdown reports | ✅ DONE | `format_session_summary_markdown()` outputs structured GitHub-style report |
+| Strict CSV formula-injection defense | ✅ DONE | `storage/export.py`: `sanitize_csv_cell()` prepends quote for `=`, `+`, `-`, `@`, `\t`, `\r` (CWE-1236) |
+| JSON & CSV export engine | ✅ DONE | `export_audit_log()` exports complete audit logs with filters |
+| Web summary & export routes | ✅ DONE | `/session/<sid>/summary` and `/export` in `dashboard/app.py` |
+
+---
+
 ## Baseline Test Suite Summary
 
-- **Total tests:** 145
-- **Passed:** 139
+- **Total tests:** 154
+- **Passed:** 148
 - **XPassed (expected model improvements):** 6
 - **Failed:** 0
 - **Pass Rate:** 100%
