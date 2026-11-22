@@ -169,3 +169,41 @@
    - Executed full test suite across entire repository: **139 tests collected: 133 passed, 6 xpassed, 0 failed**.
    - Pass rate: 100%. Test runtime: ~15.2 seconds.
    - Milestone 2 (**Previews, Impact Analysis & Approval Safeguards**) is 100% complete.
+
+---
+
+## Session 6 — 2026-11-22: Milestone 3 Implementation (Intelligent Runtime Safety & Anomaly Detection)
+
+### User Guidance Received
+- Continue autonomous implementation roadmap according to v2.3 specification.
+- Complete Milestone 3 (Feature 12: Anomaly Detection & Circuit Breaker).
+- Ensure "paused means paused" across all execution paths.
+
+### Completed Work
+
+1. **Circuit-Breaker Detection Engine (`core/anomaly.py`, Feature 12)**
+   - Implemented `check_circuit_breaker(session_id, quota_headroom_pct)` monitoring three distinct criteria:
+     - **High-Risk Burst**: Tripped if $\ge 5$ high-risk actions occur within rolling 60-second window.
+     - **Repeated Rejections**: Tripped if the exact same command is rejected $\ge 3$ times within 600 seconds.
+     - **Low Quota Headroom**: Tripped if shared quota headroom falls below 5%.
+   - Returns boolean `(tripped, reason)` for actionable handling.
+
+2. **Session State & Pause Management (`storage/db.py`)**
+   - Implemented `is_session_paused(session_id)` checking `session_states` table.
+   - Implemented `pause_session(session_id, reason)` recording timestamp and pause trigger reason.
+
+3. **Pipeline Circuit-Breaker Integration (`core/pipeline.py`)**
+   - Added Step 0 "Paused Means Paused": unconditionally denies all actions (even rule-proven LOW tier actions) if the session is currently marked paused.
+   - Added Step 0b Circuit Breaker evaluation: automatically checks circuit-breaker thresholds on each incoming event, pauses the session in DB upon trip, and returns a DENY decision with CRITICAL effective tier.
+
+4. **Testing & Verification (`tests/test_milestone3.py`)**
+   - Authored unit test suite in `tests/test_milestone3.py` (6 tests, all passed):
+     - `test_circuit_breaker_high_risk_burst`: verifies trip on 5 high-risk commands in 60s.
+     - `test_circuit_breaker_repeated_rejections`: verifies trip on 3 rejections of same command.
+     - `test_circuit_breaker_low_quota_headroom`: verifies trip when quota headroom < 5%.
+     - `test_pipeline_blocks_when_session_paused`: verifies pause enforcement even on safe commands.
+     - `test_pipeline_trips_circuit_breaker_and_pauses`: verifies pipeline automatically trips breaker and transitions session to paused state.
+     - `test_pipeline_allows_normal_session`: verifies clean execution for unpaused sessions.
+   - Executed full test suite across entire repository: **145 tests collected: 139 passed, 6 xpassed, 0 failed**.
+   - Pass rate: 100%. Test runtime: ~33.3 seconds.
+   - Milestone 3 (**Intelligent Runtime Safety & Anomaly Detection**) is 100% complete.

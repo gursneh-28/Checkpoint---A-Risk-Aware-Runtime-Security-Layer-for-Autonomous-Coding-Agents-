@@ -7,10 +7,10 @@ Checkpoint is an independent runtime security layer designed to intercept tool, 
 
 ## Current Project Status
 
-- **Development Stage:** Application Feature Implementation (Milestones 1 & 2 Complete, moving to Milestone 3).
-- **Test Suite Status:** **139 tests passing (133 passed, 6 xpassed, 0 failed)** across all unit, classification, storage, version control, audit journal, git safety, preview, and impact tests.
-- **Current Completed Baseline:** Milestones 1 & 2 (**Storage, Retention, Recovery, Previews, Impact Analysis, and Approval Safeguards**) are fully implemented and tested.
-- **Next Milestone Task:** Milestone 3 (**Intelligent Runtime Safety & Anomaly Detection**).
+- **Development Stage:** Application Feature Implementation (Milestones 1, 2, and 3 Complete, moving to Milestone 4).
+- **Test Suite Status:** **145 tests passing (139 passed, 6 xpassed, 0 failed)** across all unit, classification, storage, version control, audit journal, git safety, preview, impact, and anomaly circuit-breaker tests.
+- **Current Completed Baseline:** Milestones 1, 2, & 3 (**Storage, Retention, Recovery, Previews, Impact Analysis, Approval Safeguards, and Anomaly Circuit Breaker**) are fully implemented and tested.
+- **Next Milestone Task:** Milestone 4 (**Operational Dashboard, Provenance, Feedback & Export**).
 
 ### What is Implemented vs. Simulated vs. Deferred
 
@@ -18,6 +18,10 @@ Checkpoint is an independent runtime security layer designed to intercept tool, 
 |---|---|---|
 | **Risk Classification & AST Parsing** | ✅ Genuinely Implemented | Rules-first pipeline, ML model fallback, and `bashlex` AST parser adapter (`core/parser_adapter.py`) with support matrix coverage categories. |
 | **Blob Store & Version Control (Task 1.1)** | ✅ Genuinely Implemented | SHA-256 sharded compressed blob store (`core/blob_store.py`), 50 MB file limit, conflict detection, staged restore, Option A 2 GB shared quota accounting, and 30-day retention with pin protection (`core/version_control.py`). |
+| **Durable Audit Journal (Task 1.2)** | ✅ Genuinely Implemented | Write-ahead drop-folder ingestion (`storage/journal.py`), append-only global hash chain, sequence buffering, late event absorption, acyclic tombstone redaction, and chain-head anchoring. |
+| **Git Safety Net (Task 1.3)** | ✅ Genuinely Implemented | Bare external backups (`core/git_safety.py`), staged/unstaged patches, untracked files, full bundle verification, destructive command coverage matrix, and safe environment isolation. |
+| **Previews & Impact Analysis (Milestone 2)** | ✅ Genuinely Implemented | Blast radius modeling, deterministic `preview_hash`, target state fingerprint validation, composite safety scoring (0-100), and typed "YES" confirmation gate for CRITICAL actions. |
+| **Anomaly Circuit Breaker (Milestone 3)** | ✅ Genuinely Implemented | High-risk burst detection ($\ge 5$ in 60s), repeated rejection trip ($\ge 3$), low quota breaker (< 5%), and unconditional "paused means paused" pipeline blocking. |
 | **Safer Alternatives & Trash** | ✅ Genuinely Implemented | Safer command rewriting (e.g. `git push --force` → `--force-with-lease`, `git reset --hard` → `git stash`, recoverable soft delete to trash). |
 | **Confirmation Gate & Dashboard MVP** | ✅ Genuinely Implemented | CSRF-protected Flask dashboard, idempotent action decision state transitions (Approve / Reject / Alternative). |
 | **Claude Code Interceptor Hooks** | ⚠️ Simulated / Contract Ready | Contract adapter implemented (`core/claude_code_adapter.py`) and verified against official Claude Code hook JSON fixtures. Live interception is **blocked/deferred** awaiting Claude Code installation on this host. |
@@ -37,16 +41,16 @@ Status definitions:
 |---|---|:---:|---|
 | **1** | **Interceptor and Real Agent Connection** | 🟡 PARTIAL / ⚠️ SIMULATED | `core/claude_code_adapter.py` implements PreToolUse/PostToolUse protocol, fail-closed handling (`onFailure: block`), and `updatedInput` replacement. Verified via simulated fixtures. Live hook connection deferred until Claude Code is installed. |
 | **2** | **Risk Classifier** | ✅ DONE | Hard rules authoritative, ML fallback (never predicts LOW), chained command splitting, `.env` secret file protection, exact protected branch matching, and AST parser adapter (`core/parser_adapter.py`). 100% golden tests passing. |
-| **3** | **Fast-Path Execution (Instant Run)** | 🟡 PARTIAL | Fast-path routing implemented in `core/pipeline.py` for rule-proven LOW actions. Full end-to-end integration with durable journal write is part of Task 1.2. |
+| **3** | **Fast-Path Execution (Instant Run)** | ✅ DONE | Fast-path routing implemented in `core/pipeline.py` for rule-proven LOW actions with synchronous durable journal write. "Paused means paused" circuit-breaker stops even fast-path actions. |
 | **4** | **Safer Alternatives ("Do this instead")** | ✅ DONE | `core/suggestions.py` maps destructive commands to safer equivalents (`--force-with-lease`, `git stash`, soft-delete to trash with deduplicated collision handling). |
 | **5** | **Human Confirmation Gate** | ✅ DONE | `core/confirmation.py` & `dashboard/app.py`: Pause on MEDIUM/HIGH/CRITICAL tiers, CSRF tokens on all POST endpoints, idempotent single-use decisions, typed "YES" confirmation requirement for CRITICAL, plain-outcome display. |
-| **6** | **Action Lifecycle & State Machine** | 🟡 PARTIAL | `core/event_types.py` models full lifecycle states (`received` → `classified` → `pending` → `approved` → `backing_up` → `backup_verified` → `execution_authorized` → `executed`/`failed`/`rejected`/`outcome_unknown`). Transition enforcement is integrated into pipeline. |
+| **6** | **Action Lifecycle & State Machine** | ✅ DONE | `core/event_types.py` models full lifecycle states (`received` → `classified` → `pending` → `approved` → `backing_up` → `backup_verified` → `execution_authorized` → `executed`/`failed`/`rejected`/`outcome_unknown`). Transition enforcement is integrated into pipeline. |
 | **7** | **File History & Version Control** | ✅ DONE | `core/blob_store.py` & `core/version_control.py`: SHA-256 sharded compressed store, 50 MB per-file limit, conflict-aware staged atomic restore, Option A 2 GB shared quota accounting, 30-day retention, pin protection. (Completed in Milestone 1, Task 1.1). |
 | **8** | **Full Action Log & Durable Journal** | ✅ DONE | `storage/journal.py`: Durable drop-folder ingestion (.tmp -> .journal) with fsync, append-only global hash chain, out-of-order buffering, late arrival absorption, acyclic tombstone redaction, and atomic external chain-head anchoring. |
 | **9** | **Explicit High-Risk Typed Approvals** | ✅ DONE | `core/policy_resolver.py` & `storage/db.py`: CRITICAL tier policy classification (privilege elevation, download/pipe sh, disk formatting, .git deletion, protected branch force-push), mandatory exact typed "YES" confirmation, unskippable hard-denies. |
 | **10** | **Sandbox & Dry-Run Preview** | ✅ DONE | `core/preview.py`: Plain-language preview generation, deterministic SHA-256 `preview_hash`, blast radius modeling, and target state fingerprint verification detecting shifted filesystem states. |
 | **11** | **Impact Analysis & Safety Score** | ✅ DONE | `core/impact_report.py`: Predicted effects manifest, target sensitivity, and composite `compute_safety_score()` (0 to 100) evaluating reversibility, scope boundedness, and predictability. |
-| **12** | **Anomaly Detection** | 🟡 PARTIAL | `core/anomaly.py` contains rule-based anomaly detectors (bursts, repeated rejections, out-of-scope paths). Behavioral scoring scheduled for Milestone 3. |
+| **12** | **Anomaly Detection & Circuit Breaker** | ✅ DONE | `core/anomaly.py`: High-risk burst detection ($\ge 5$ in 60s), repeated rejection trip ($\ge 3$), low quota breaker (< 5%), and session-level "paused means paused" pipeline blocking. |
 | **13** | **Git Safety Net** | ✅ DONE | `core/git_safety.py`: Bare external backup store under `%LOCALAPPDATA%\Checkpoint\git-backups\`, separate staged/unstaged patches and untracked files, verified git bundle (--all), destructive command coverage matrix, hard-deny for gc/prune, and conflict-aware restore engine. |
 | **14** | **Feedback & Wrong-Rating Queue** | 🟡 PARTIAL | `flag_events` table and schema exist in `storage/db.py`. Review interface and dataset update queue scheduled for Milestone 4. |
 | **15** | **Alerts & Notifications** | 🟡 PARTIAL | `alerts` table and event types exist. Pending approval alerting and notification delivery scheduled for Milestone 4. |
@@ -61,8 +65,7 @@ Status definitions:
   - [x] **Task 1.2:** Durable Journal Ingestion & Audit Engine (`storage/journal.py`) — **COMPLETED & TESTED**
   - [x] **Task 1.3:** Git Safety Net & Bare Backup Store (`core/git_safety.py`) — **COMPLETED & TESTED**
 - [x] **Milestone 2: Previews, Impact Analysis & Approval Safeguards** (Features 5, 9, 10, 11) — **COMPLETED & TESTED**
-- [ ] **Milestone 3: Intelligent Runtime Safety & Anomaly Detection** (Features 2, 4, 12)
-- [ ] **Milestone 3: Intelligent Runtime Safety & Anomaly Detection** (Features 2, 4, 12)
+- [x] **Milestone 3: Intelligent Runtime Safety & Anomaly Detection** (Feature 12) — **COMPLETED & TESTED**
 - [ ] **Milestone 4: Operational Dashboard, Provenance, Feedback & Export** (Features 14, 15, 16)
 - [ ] **Milestone 5: Host-Level Security Integration & Live Agent Verification** (Phase 0 / Phase 1 OS boundaries and Claude Code installation)
 

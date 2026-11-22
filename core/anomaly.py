@@ -173,6 +173,30 @@ class AnomalyDetector:
         if rejected and event.command:
             self.record_rejection(sid, event.command)
 
+    def check_circuit_breaker(self, session_id: str, quota_headroom_pct: float = 100.0) -> Tuple[bool, str]:
+        """
+        Check if any circuit-breaker threshold is tripped for this session:
+        - Burst > BURST_THRESHOLD (5 high risk in 60s)
+        - Repeated rejection >= REJECTION_THRESHOLD (3 rejections)
+        - Quota headroom < 5%
+        Returns (should_pause, reason).
+        """
+        s = self._state(session_id)
+        self._prune_burst(s)
+        self._prune_rejections(s)
+
+        if len(s.high_risk_times) >= BURST_THRESHOLD:
+            return True, f"Circuit breaker tripped: high-risk burst threshold exceeded ({len(s.high_risk_times)} in {BURST_WINDOW_SECONDS}s)"
+
+        for cmd_hash, q in s.rejection_times.items():
+            if len(q) >= REJECTION_THRESHOLD:
+                return True, f"Circuit breaker tripped: repeated retry of rejected command (rejected {len(q)} times)"
+
+        if quota_headroom_pct < 5.0:
+            return True, f"Circuit breaker tripped: shared quota headroom critically low ({quota_headroom_pct:.1f}% remaining < 5%)"
+
+        return False, ""
+
 
 # ---------------------------------------------------------------------------
 # Module-level singleton
@@ -191,3 +215,7 @@ def get_signal(event: Event, effective_tier: RiskTier) -> AnomalySignal:
 
 def post_decision(event: Event, effective_tier: RiskTier, rejected: bool):
     _detector.post_decision(event, effective_tier, rejected)
+
+
+def check_circuit_breaker(session_id: str, quota_headroom_pct: float = 100.0) -> Tuple[bool, str]:
+    return _detector.check_circuit_breaker(session_id, quota_headroom_pct)

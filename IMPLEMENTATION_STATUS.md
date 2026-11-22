@@ -167,10 +167,22 @@
 
 ---
 
+## Feature 12 — Anomaly Detection & Circuit Breaker
+
+| Sub-feature | Status | Notes |
+|------------|--------|-------|
+| High-risk burst detection | ✅ DONE | `core/anomaly.py`: Tripped when $\ge 5$ high-risk actions occur in 60s |
+| Repeated rejection breaker | ✅ DONE | Tripped when same command rejected $\ge 3$ times |
+| Low quota headroom breaker | ✅ DONE | Tripped when Option A shared quota headroom falls below 5% |
+| "Paused means paused" enforcement | ✅ DONE | `core/pipeline.py`: Rejects all commands (including LOW) when session is paused |
+| Session state tracking | ✅ DONE | `storage/db.py`: `is_session_paused()`, `pause_session()` persisted in `session_states` |
+
+---
+
 ## Baseline Test Suite Summary
 
-- **Total tests:** 139
-- **Passed:** 133
+- **Total tests:** 145
+- **Passed:** 139
 - **XPassed (expected model improvements):** 6
 - **Failed:** 0
 - **Pass Rate:** 100%

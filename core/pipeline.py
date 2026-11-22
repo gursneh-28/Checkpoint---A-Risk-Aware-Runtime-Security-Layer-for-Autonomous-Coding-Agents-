@@ -69,6 +69,28 @@ def evaluate(event: Event) -> Decision:
             reason=f"Journal initialization failed: {e}. Action blocked (record-first policy).",
         )
 
+    # 0. Session paused check (Paused means paused)
+    from storage.db import is_session_paused, pause_session
+    if event.session_id and is_session_paused(event.session_id):
+        return Decision(
+            kind=DecisionKind.DENY,
+            reason=f"Session '{event.session_id}' is PAUSED. Action blocked until explicit administrative resume.",
+            base_tier=RiskTier.UNKNOWN,
+            effective_tier=RiskTier.UNKNOWN,
+        )
+
+    # 0b. Circuit breaker check
+    if event.session_id:
+        tripped, cb_reason = anomaly.check_circuit_breaker(event.session_id)
+        if tripped:
+            pause_session(event.session_id, cb_reason)
+            return Decision(
+                kind=DecisionKind.DENY,
+                reason=f"Circuit breaker tripped: {cb_reason}. Session paused.",
+                base_tier=RiskTier.HIGH,
+                effective_tier=RiskTier.CRITICAL,
+            )
+
     # Determine tool kind
     tool_kind = ToolKind(event.tool_name) if event.tool_name in {t.value for t in ToolKind} \
                 else ToolKind.OTHER

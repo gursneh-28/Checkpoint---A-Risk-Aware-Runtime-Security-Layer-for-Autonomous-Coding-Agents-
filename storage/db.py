@@ -537,6 +537,32 @@ def decide_action(action_id: int, decision: str, typed_confirmation: Optional[st
     return success
 
 
+def is_session_paused(session_id: str) -> bool:
+    """Check if session is paused by circuit breaker or integrity violation."""
+    if not session_id:
+        return False
+    with _connect() as conn:
+        try:
+            row = conn.execute("SELECT state FROM session_states WHERE session_id=?", (session_id,)).fetchone()
+            return bool(row and row[0] == "paused")
+        except sqlite3.OperationalError:
+            return False
+
+
+def pause_session(session_id: str, reason: str):
+    """Mark session as paused."""
+    if not session_id:
+        return
+    ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    with _connect() as conn:
+        conn.execute("""
+            INSERT INTO session_states (session_id, state, paused_at, pause_reason)
+            VALUES (?, 'paused', ?, ?)
+            ON CONFLICT(session_id) DO UPDATE SET
+                state='paused', paused_at=excluded.paused_at, pause_reason=excluded.pause_reason
+        """, (session_id, ts, reason))
+
+
 def flag_action(action_id: int, reason: str, correct_tier: str = "",
                 notes: str = "") -> int:
     """Feature 14: flag a wrong rating. Never changes current decision."""
