@@ -87,16 +87,13 @@ def test_env_prefix_does_not_make_command_safe(monkeypatch):
 
 
 # ---------- known gaps (item 28 before/after) ----------
-# These use the REAL model. They are xfail now and should flip to passing
-# as the classifier improves; remove the xfail mark once each one passes.
-
+# Former known gaps — now verified passing via deterministic rules and trained model:
 KNOWN_GAPS = [
     ("git clean -fdx", "HIGH"),
     ("chmod -R 777 /", "HIGH"),
 ]
 
 
-@pytest.mark.xfail(reason="known gap from item 23, target for item 28", strict=False)
 @pytest.mark.parametrize("cmd,expected", KNOWN_GAPS)
 def test_known_gap_cases(cmd, expected):
     assert rc.classify_risk(cmd) == expected

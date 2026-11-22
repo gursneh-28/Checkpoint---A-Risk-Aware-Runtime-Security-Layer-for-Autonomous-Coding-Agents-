@@ -285,6 +285,27 @@ def classify_by_rules(command: str) -> Optional[str]:
     return None   # ML fallback
 
 
+def _extract_git_subcommand_and_args(tokens: list[str]) -> tuple[Optional[str], list[str]]:
+    """
+    Extract the git subcommand and remaining arguments, properly skipping
+    global git flags like -C <dir>, -c <name=val>, --git-dir=<path>, etc.
+    """
+    i = 1
+    n = len(tokens)
+    while i < n:
+        tok = tokens[i]
+        if not tok.startswith("-"):
+            return tok, tokens[i + 1:]
+        # Global flags that take an argument:
+        if tok in ("-c", "-c", "-c", "--git-dir", "--work-tree", "--namespace", "--super-prefix") and i + 1 < n:
+            i += 2
+        elif tok in ("-c", "-c") or tok.startswith(("-c", "-c", "--git-dir=", "--work-tree=")):
+            i += 1
+        else:
+            i += 1
+    return None, []
+
+
 # ---------------------------------------------------------------------------
 # classify_git_op — git-specific rules
 # ---------------------------------------------------------------------------
@@ -306,7 +327,9 @@ def classify_git_op(git_command: str) -> str:
     if len(tokens) < 2 or tokens[0] != "git":
         return classify_risk(git_command)
 
-    sub = tokens[1]
+    sub, sub_args = _extract_git_subcommand_and_args(tokens)
+    if not sub:
+        return classify_risk(git_command)
 
     # Read-only operations
     if sub in ("status", "log", "diff", "fetch", "show", "describe", "ls-files",
@@ -319,8 +342,9 @@ def classify_git_op(git_command: str) -> str:
 
     # push
     if sub == "push":
-        force_flag = any(t in ("-f", "--force") for t in tokens)
-        lease_flag = any(t.startswith("--force-with-lease") for t in tokens)
+        all_tokens = tokens
+        force_flag = any(t in ("-f", "--force") for t in all_tokens)
+        lease_flag = any(t.startswith("--force-with-lease") for t in all_tokens)
         branch = _extract_git_branch(lower)
 
         if _is_protected_branch(branch):
@@ -343,9 +367,9 @@ def classify_git_op(git_command: str) -> str:
             return "HIGH"
         return "MEDIUM"
 
-    # clean
+    # clean (always HIGH; dry-run offered as alternative)
     if sub == "clean":
-        return "HIGH"   # git clean always HIGH; dry-run offered as alternative
+        return "HIGH"
 
     # branch / tag delete
     if sub in ("branch", "tag"):

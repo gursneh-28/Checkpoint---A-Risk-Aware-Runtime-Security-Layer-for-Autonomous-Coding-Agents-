@@ -35,19 +35,11 @@ def _check(result, expected):
     (classify_file_op, ("write", "/etc/hosts"), "MEDIUM"),
     (classify_file_op, ("write", "../outside.txt"), "MEDIUM"),
     (classify_file_op, ("move", "/etc/passwd"), "HIGH"),
+    # Former Group B2 model gaps — now verified fixed with deterministic rules:
+    (classify_risk, ("find . -delete",), "HIGH"),
+    (classify_risk, ("chmod -R 777 .",), "HIGH"),
+    (classify_git_op, ("git -C /repo push --force",), "HIGH"),
+    (classify_git_op, ("git clean -fdx",), "HIGH"),
 ])
 def test_current_behaviour(func, args, expected):
     assert func(*args) == expected
-
-
-# Group B2: gaps that fall through to the ML model. The result depends on the
-# trained model, so these are NOT strict: XFAIL = model still misses it,
-# XPASS = model now catches it. Neither fails the suite.
-@pytest.mark.parametrize("func, args, expected", [
-    pytest.param(classify_risk, ("find . -delete",), "not LOW", marks=pytest.mark.xfail(strict=False, reason="find -delete: no rule, depends on model")),
-    pytest.param(classify_risk, ("chmod -R 777 .",), "HIGH", marks=pytest.mark.xfail(strict=False, reason="recursive chmod 777: no rule, depends on model")),
-    pytest.param(classify_git_op, ("git -C /repo push --force",), "HIGH", marks=pytest.mark.xfail(strict=False, reason="git args before subcommand: depends on model")),
-    pytest.param(classify_git_op, ("git clean -fdx",), "HIGH", marks=pytest.mark.xfail(strict=False, reason="git clean: no rule, depends on model")),
-])
-def test_known_model_gaps(func, args, expected):
-    _check(func(*args), expected)
