@@ -9,6 +9,7 @@ Provides:
 
 from __future__ import annotations
 
+import datetime
 import json
 import time
 from enum import Enum
@@ -168,3 +169,46 @@ def dispatch_alerts(
             }
 
     return results
+
+
+def dispatch_timeout_alert(
+    action_id: int,
+    notifier: Optional[DesktopNotifier] = None,
+    base_url: str = "http://localhost:5000",
+) -> Dict[str, Any]:
+    """
+    Dispatch an alert for an expired approval request.
+    Records alert in DB and attempts desktop delivery.
+    Never raises an exception (safe for background workers).
+    """
+    try:
+        action = get_action(action_id)
+        if not action:
+            return {"error": f"Action {action_id} not found"}
+
+        tier = action.get("effective_tier") or action.get("risk_tier", "UNKNOWN")
+        cmd = action.get("command", "")[:60]
+        title = f"Checkpoint Approval Expired [{tier}]"
+        msg = f"Action #{action_id} expired after 300s: {cmd}"
+
+        payload = {
+            "event": "action.approval_expired",
+            "action_id": action_id,
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "command": cmd,
+            "risk_tier": tier,
+        }
+        alert_id = create_alert(
+            action_id=action_id,
+            kind="timeout",
+            channel="desktop",
+            payload=json.dumps(payload),
+        )
+
+        desktop_agent = notifier or _default_notifier
+        delivered = desktop_agent.notify(title, msg)
+        status = "delivered" if delivered else "throttled"
+        update_alert_status(alert_id, status)
+        return {"action_id": action_id, "alert_id": alert_id, "status": status}
+    except Exception as e:
+        return {"error": str(e)}

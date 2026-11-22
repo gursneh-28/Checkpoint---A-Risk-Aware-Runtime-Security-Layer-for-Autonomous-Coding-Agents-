@@ -39,6 +39,7 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "checkpoint.db")
 
 VALID_DECISIONS = ("approved", "rejected", "alternative")
 OUTPUT_MAX_BYTES = 1 * 1024 * 1024   # 1 MB
+APPROVAL_TIMEOUT_SECONDS = 300.0     # 5-minute authoritative approval window
 
 
 # ---------------------------------------------------------------------------
@@ -469,7 +470,7 @@ def event_type_for_status(status: str) -> str:
         "outcome_unknown":      "outcome_unknown",
         "pending":              "approval_requested",
         "approved":             "decision_recorded",
-        "stale":                "rejected",
+        "stale":                "approval_expired",
     }.get(status, "execution_completed")
 
 
@@ -551,14 +552,42 @@ def decide_action(action_id: int, decision: str, typed_confirmation: Optional[st
         return False
     with _connect() as conn:
         conn.execute("BEGIN EXCLUSIVE")
-        row = conn.execute("SELECT status, effective_tier, base_tier FROM actions WHERE id=?", (action_id,)).fetchone()
+        row = conn.execute(
+            "SELECT status, effective_tier, base_tier, timestamp FROM actions WHERE id=?",
+            (action_id,)
+        ).fetchone()
         if not row:
             conn.execute("ROLLBACK")
             return False
 
-        status, eff, base = row
+        status, eff, base, ts_str = row
         if status != "pending":
             conn.execute("ROLLBACK")
+            return False
+
+        # Authoritative expiration check (300s window)
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
+        try:
+            dt = datetime.datetime.fromisoformat(ts_str)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=datetime.timezone.utc)
+            age = (now_utc - dt).total_seconds()
+        except Exception:
+            age = 0.0
+
+        if age >= APPROVAL_TIMEOUT_SECONDS:
+            conn.execute("UPDATE actions SET status='stale' WHERE id=?", (action_id,))
+            _append_event(conn, action_id, "approval_expired", {
+                "age_seconds": round(age, 2),
+                "timeout_seconds": APPROVAL_TIMEOUT_SECONDS,
+                "reason": "late_decision_attempt",
+            })
+            conn.execute("COMMIT")
+            try:
+                from core.alerts import dispatch_timeout_alert
+                dispatch_timeout_alert(action_id)
+            except Exception:
+                pass
             return False
 
         # CRITICAL tier typed confirmation rule
@@ -587,6 +616,54 @@ def decide_action(action_id: int, decision: str, typed_confirmation: Optional[st
         else:
             conn.execute("ROLLBACK")
     return success
+
+
+def expire_stale_actions(timeout_seconds: float = APPROVAL_TIMEOUT_SECONDS) -> List[int]:
+    """
+    Server-side authoritative expiry sweep.
+    Finds all actions with status='pending' where (now - timestamp) >= timeout_seconds.
+    Transitions status to 'stale', appends an 'approval_expired' journal event,
+    and dispatches a timeout alert attempt.
+    Returns the list of expired action IDs.
+    """
+    expired_ids = []
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    with _connect() as conn:
+        rows = conn.execute("SELECT id, timestamp FROM actions WHERE status='pending'").fetchall()
+        for aid, ts_str in rows:
+            try:
+                dt = datetime.datetime.fromisoformat(ts_str)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=datetime.timezone.utc)
+                age = (now_utc - dt).total_seconds()
+            except Exception:
+                age = 999999.0
+
+            if age >= timeout_seconds:
+                conn.execute("BEGIN EXCLUSIVE")
+                cur = conn.execute(
+                    "UPDATE actions SET status='stale' WHERE id=? AND status='pending'",
+                    (aid,)
+                )
+                if cur.rowcount == 1:
+                    _append_event(conn, aid, "approval_expired", {
+                        "age_seconds": round(age, 2),
+                        "timeout_seconds": timeout_seconds,
+                        "expired_at": now_utc.isoformat(),
+                    })
+                    conn.execute("COMMIT")
+                    expired_ids.append(aid)
+                else:
+                    conn.execute("ROLLBACK")
+
+    for aid in expired_ids:
+        try:
+            from core.alerts import dispatch_timeout_alert
+            dispatch_timeout_alert(aid)
+        except Exception:
+            pass
+
+    return expired_ids
 
 
 def is_session_paused(session_id: str) -> bool:
