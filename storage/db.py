@@ -135,6 +135,52 @@ def init_db():
             coverage        TEXT DEFAULT 'unknown'
         );
 
+        CREATE TABLE IF NOT EXISTS blobs (
+            blob_hash        TEXT PRIMARY KEY,
+            original_size    INTEGER NOT NULL,
+            compressed_size  INTEGER NOT NULL,
+            created_at       TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS versions (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            action_id        INTEGER REFERENCES actions(id),
+            file_path        TEXT NOT NULL,
+            blob_hash        TEXT,
+            state            TEXT NOT NULL,
+            target           TEXT,
+            file_mode        INTEGER,
+            mtime            REAL,
+            created_at       TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS pins (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            version_id       INTEGER NOT NULL REFERENCES versions(id),
+            pinned_at        TEXT NOT NULL,
+            reason           TEXT DEFAULT 'user_pinned'
+        );
+
+        CREATE TABLE IF NOT EXISTS trash_items (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            original_path    TEXT NOT NULL,
+            trash_path       TEXT NOT NULL,
+            logical_size     INTEGER NOT NULL,
+            deleted_at       TEXT NOT NULL,
+            purged_at        TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS restore_journal (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            restore_id       TEXT NOT NULL,
+            action_id        INTEGER,
+            file_path        TEXT NOT NULL,
+            staged_path      TEXT,
+            backup_blob_hash TEXT,
+            status           TEXT NOT NULL,
+            timestamp        TEXT NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS checkpoints (
             id            INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp     TEXT NOT NULL,

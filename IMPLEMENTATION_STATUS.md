@@ -86,10 +86,29 @@
 
 ---
 
+## Feature 7 — File History & Version Control
+
+| Sub-feature | Status | Notes |
+|------------|--------|-------|
+| Content-addressed blob store | ✅ DONE | `core/blob_store.py`: SHA-256 sharded store, atomic writes via temp file + replace |
+| 50 MB single file cap | ✅ DONE | Enforced in `core/blob_store.py` (`FileTooLargeError`) |
+| zlib blob compression & decompression | ✅ DONE | Verified integrity on write/read with fallback handling |
+| Version control engine | ✅ DONE | `core/version_control.py`: snapshot_file, snapshot_directory |
+| Explicit file state tracking | ✅ DONE | Tracks `file`, `symlink`, and `deleted` states |
+| Path traversal protection | ✅ DONE | Validates paths remain strictly within `workspace_root` |
+| Exclude regenerable dependencies | ✅ DONE | Excludes `node_modules`, `.venv`, `__pycache__`, etc. |
+| Conflict-aware restore | ✅ DONE | Compares current hash & mtime before restore; blocks if modified unless force=True |
+| Staged restore & recovery journal | ✅ DONE | `restore_journal` table tracks staged, verified, and reversed restore attempts |
+| Option A Quota (2 GB shared) | ✅ DONE | Tracks blob bytes, logical trash bytes, and external git backup bytes |
+| Option A Strict Reclamation Order | ✅ DONE | Reclaims expired trash (>30 days) first, then expired unpinned snapshots (>30 days) |
+| Pinning immunity | ✅ DONE | Pinned versions in `pins` table are never purged by automated reclamation |
+
+---
+
 ## Baseline Test Suite Summary
 
-- **Total tests:** 88
-- **Passed:** 82
+- **Total tests:** 106
+- **Passed:** 100
 - **XPassed (expected model improvements):** 6
 - **Failed:** 0
 - **Pass Rate:** 100%

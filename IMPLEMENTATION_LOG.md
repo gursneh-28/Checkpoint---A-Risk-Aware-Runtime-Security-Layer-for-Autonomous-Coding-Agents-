@@ -61,6 +61,36 @@
 - **88 passed** (82 unit tests + 6 model expectation xpasses), **0 failed**.
 - Test runtime: ~4.95 seconds.
 
-### Next Steps (Phase 0 Continuation & Gate Readiness)
-- For the Windows service account (`CheckpointSvc`) and ACL proof: await administrator elevation / approval if the user wishes to proceed with local OS isolation.
-- Keep live Claude Code tests explicitly blocked until the application is installed.
+---
+
+## Session 3 — 2026-11-22: Milestone 1, Task 1.1 — Content-Addressed Blob Store & File History / Version Control
+
+### User Guidance Received
+- Proceed with Milestone 1, Task 1.1: Content-Addressed Blob Store & File History / Version Control.
+- Enforce strict policies: 50 MB max per file, 2 GB shared quota, 30-day retention for unpinned snapshots and trash, Option A reclamation order, pin immunity.
+- Strictly adhere to safety guidelines: tests must run in isolated `tmp_path` fixtures without touching user or workspace files; restore must detect conflicts; symlinks and path traversals safely handled; no administrative or host-level ACL operations.
+
+### Completed Work
+
+1. **Content-Addressed Blob Store (`core/blob_store.py`)**
+   - Implemented `BlobStore` with SHA-256 addressing, directory sharding (`ab/cd/<hash>.blob`), atomic writes via temp file and `os.replace`, zlib compression and decompression.
+   - Enforced 50 MB individual file limit raising `FileTooLargeError`.
+   - Handled empty files (`EMPTY_SHA256`) and blob integrity verification.
+   - Authored unit test suite in `tests/test_blob_store.py` (8 tests, all passed).
+
+2. **Database Schema Enhancements (`storage/db.py`)**
+   - Added tables: `blobs`, `versions`, `pins`, `trash_items`, and `restore_journal`.
+   - Maintained column order and foreign key constraints on `actions(id)` and `versions(id)`.
+
+3. **Version Control Engine & Option A Retention (`core/version_control.py`)**
+   - Implemented `VersionControl` managing snapshots for files, symlinks, and explicit deleted states.
+   - Directory snapshots with automatic exclusion of regenerable folders (`node_modules`, `.venv`, `.git`, `__pycache__`, etc.).
+   - Path traversal prevention (`PathTraversalError`) ensuring operations never escape `workspace_root`.
+   - Conflict-aware restore engine (`RestoreConflictError`) comparing on-disk mtime and SHA-256 hash before restore.
+   - Staged restore with recovery journaling (`restore_journal`), post-swap verification, and atomic replacement.
+   - Option A Quota & Retention: 2 GB shared quota accounting across compressed blobs, active trash, and git backups with 80% and 95% warning thresholds.
+   - Option A Strict Reclamation: never purges unexpired data (< 30 days) or pinned versions; purges oldest expired trash first, then oldest expired unpinned snapshots.
+
+4. **Testing & Verification**
+   - Authored comprehensive test suite in `tests/test_version_control.py` (10 tests).
+   - Executed full test suite: **106 tests collected: 100 passed, 6 xpassed, 0 failed**.
