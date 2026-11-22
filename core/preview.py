@@ -80,18 +80,47 @@ class Preview:
 
     # Hash of this exact preview (bound to approvals)
     preview_hash:      str = ""
+    blast_radius:      Dict[str, Any] = field(default_factory=dict)
+    target_fingerprints: Dict[str, str] = field(default_factory=dict)
 
     def compute_hash(self) -> str:
         blob = json.dumps({
             "headline": self.headline,
             "details":  self.details,
             "effects":  self.effects_summary,
+            "blast_radius": self.blast_radius,
         }, sort_keys=True)
         self.preview_hash = hashlib.sha256(blob.encode()).hexdigest()[:16]
         return self.preview_hash
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
+
+
+def compute_target_fingerprint(path: str) -> str:
+    """Compute a lightweight state fingerprint (size:mtime) for a file or directory."""
+    try:
+        if not os.path.exists(path):
+            return "non_existent"
+        st = os.stat(path)
+        return f"{st.st_size}:{st.st_mtime}"
+    except OSError:
+        return "error"
+
+
+def verify_preview_fingerprints(preview: Preview) -> Tuple[bool, str]:
+    """
+    Verify whether on-disk target files have shifted since the preview was computed.
+    Returns (is_valid, reason).
+    """
+    if not preview.target_fingerprints:
+        return True, "No target fingerprints recorded"
+
+    for path, original_fp in preview.target_fingerprints.items():
+        current_fp = compute_target_fingerprint(path)
+        if current_fp != original_fp:
+            return False, f"Target '{path}' state modified since preview generated ({original_fp} -> {current_fp})"
+    return True, "Target fingerprints intact"
 
 
 # ---------------------------------------------------------------------------

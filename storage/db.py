@@ -487,16 +487,34 @@ def set_action_status(action_id: int, status: str, output: str = ""):
         conn.execute("COMMIT")
 
 
-def decide_action(action_id: int, decision: str) -> bool:
+def decide_action(action_id: int, decision: str, typed_confirmation: Optional[str] = None) -> bool:
     """
     Single-use, transactional decision.
     Returns True only if this call actually made the decision.
     Double-clicks and two-tab races produce exactly one decision.
+    If action has effective_tier == 'CRITICAL' and decision == 'approved',
+    requires typed_confirmation == 'YES'.
     """
     if decision not in VALID_DECISIONS:
         return False
     with _connect() as conn:
         conn.execute("BEGIN EXCLUSIVE")
+        row = conn.execute("SELECT status, effective_tier, base_tier FROM actions WHERE id=?", (action_id,)).fetchone()
+        if not row:
+            conn.execute("ROLLBACK")
+            return False
+
+        status, eff, base = row
+        if status != "pending":
+            conn.execute("ROLLBACK")
+            return False
+
+        # CRITICAL tier typed confirmation rule
+        if decision == "approved" and (eff == "CRITICAL" or base == "CRITICAL"):
+            if typed_confirmation != "YES":
+                conn.execute("ROLLBACK")
+                return False
+
         if decision == "alternative":
             cur = conn.execute(
                 "UPDATE actions SET status=? WHERE id=? AND status='pending' AND suggestion IS NOT NULL",
@@ -509,8 +527,13 @@ def decide_action(action_id: int, decision: str) -> bool:
             )
         success = cur.rowcount == 1
         if success:
-            _append_event(conn, action_id, "decision_recorded", {"decision": decision})
-        conn.execute("COMMIT")
+            _append_event(conn, action_id, "decision_recorded", {
+                "decision": decision,
+                "typed_confirmation": typed_confirmation,
+            })
+            conn.execute("COMMIT")
+        else:
+            conn.execute("ROLLBACK")
     return success
 
 

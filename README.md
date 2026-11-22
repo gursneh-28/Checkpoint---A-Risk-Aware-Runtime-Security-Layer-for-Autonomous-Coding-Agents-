@@ -7,10 +7,10 @@ Checkpoint is an independent runtime security layer designed to intercept tool, 
 
 ## Current Project Status
 
-- **Development Stage:** Application Feature Implementation (Milestone 1 Complete, moving to Milestone 2).
-- **Test Suite Status:** **130 tests passing (124 passed, 6 xpassed, 0 failed)** across all unit, classification, storage, version control, audit journal, and git safety tests.
-- **Current Completed Baseline:** Milestone 1 (**Storage, Retention & Recovery**) is fully implemented and tested.
-- **Next Milestone Task:** Milestone 2 (**Previews, Impact Analysis & Approval Safeguards**).
+- **Development Stage:** Application Feature Implementation (Milestones 1 & 2 Complete, moving to Milestone 3).
+- **Test Suite Status:** **139 tests passing (133 passed, 6 xpassed, 0 failed)** across all unit, classification, storage, version control, audit journal, git safety, preview, and impact tests.
+- **Current Completed Baseline:** Milestones 1 & 2 (**Storage, Retention, Recovery, Previews, Impact Analysis, and Approval Safeguards**) are fully implemented and tested.
+- **Next Milestone Task:** Milestone 3 (**Intelligent Runtime Safety & Anomaly Detection**).
 
 ### What is Implemented vs. Simulated vs. Deferred
 
@@ -39,13 +39,13 @@ Status definitions:
 | **2** | **Risk Classifier** | ✅ DONE | Hard rules authoritative, ML fallback (never predicts LOW), chained command splitting, `.env` secret file protection, exact protected branch matching, and AST parser adapter (`core/parser_adapter.py`). 100% golden tests passing. |
 | **3** | **Fast-Path Execution (Instant Run)** | 🟡 PARTIAL | Fast-path routing implemented in `core/pipeline.py` for rule-proven LOW actions. Full end-to-end integration with durable journal write is part of Task 1.2. |
 | **4** | **Safer Alternatives ("Do this instead")** | ✅ DONE | `core/suggestions.py` maps destructive commands to safer equivalents (`--force-with-lease`, `git stash`, soft-delete to trash with deduplicated collision handling). |
-| **5** | **Human Confirmation Gate** | ✅ DONE | `core/confirmation.py` & `dashboard/app.py`: Pause on MEDIUM/HIGH tier, CSRF tokens on all POST endpoints, idempotent single-use decisions, plain-outcome display. |
+| **5** | **Human Confirmation Gate** | ✅ DONE | `core/confirmation.py` & `dashboard/app.py`: Pause on MEDIUM/HIGH/CRITICAL tiers, CSRF tokens on all POST endpoints, idempotent single-use decisions, typed "YES" confirmation requirement for CRITICAL, plain-outcome display. |
 | **6** | **Action Lifecycle & State Machine** | 🟡 PARTIAL | `core/event_types.py` models full lifecycle states (`received` → `classified` → `pending` → `approved` → `backing_up` → `backup_verified` → `execution_authorized` → `executed`/`failed`/`rejected`/`outcome_unknown`). Transition enforcement is integrated into pipeline. |
 | **7** | **File History & Version Control** | ✅ DONE | `core/blob_store.py` & `core/version_control.py`: SHA-256 sharded compressed store, 50 MB per-file limit, conflict-aware staged atomic restore, Option A 2 GB shared quota accounting, 30-day retention, pin protection. (Completed in Milestone 1, Task 1.1). |
 | **8** | **Full Action Log & Durable Journal** | ✅ DONE | `storage/journal.py`: Durable drop-folder ingestion (.tmp -> .journal) with fsync, append-only global hash chain, out-of-order buffering, late arrival absorption, acyclic tombstone redaction, and atomic external chain-head anchoring. |
-| **9** | **Explicit High-Risk Typed Approvals** | ⏳ PENDING | CRITICAL tier policy classification and mandatory typed "YES" confirmation page. Scheduled for Milestone 2. |
-| **10** | **Sandbox & Dry-Run Preview** | 🟡 PARTIAL | `core/sandbox.py` and `core/preview.py` generate shadow copies and diffs. Full preview hash binding and blast-radius generation scheduled for Milestone 2. |
-| **11** | **Impact Analysis & Safety Score** | 🟡 PARTIAL | `core/impact_report.py` foundation exists for manifest generation. Scheduled for Milestone 2. |
+| **9** | **Explicit High-Risk Typed Approvals** | ✅ DONE | `core/policy_resolver.py` & `storage/db.py`: CRITICAL tier policy classification (privilege elevation, download/pipe sh, disk formatting, .git deletion, protected branch force-push), mandatory exact typed "YES" confirmation, unskippable hard-denies. |
+| **10** | **Sandbox & Dry-Run Preview** | ✅ DONE | `core/preview.py`: Plain-language preview generation, deterministic SHA-256 `preview_hash`, blast radius modeling, and target state fingerprint verification detecting shifted filesystem states. |
+| **11** | **Impact Analysis & Safety Score** | ✅ DONE | `core/impact_report.py`: Predicted effects manifest, target sensitivity, and composite `compute_safety_score()` (0 to 100) evaluating reversibility, scope boundedness, and predictability. |
 | **12** | **Anomaly Detection** | 🟡 PARTIAL | `core/anomaly.py` contains rule-based anomaly detectors (bursts, repeated rejections, out-of-scope paths). Behavioral scoring scheduled for Milestone 3. |
 | **13** | **Git Safety Net** | ✅ DONE | `core/git_safety.py`: Bare external backup store under `%LOCALAPPDATA%\Checkpoint\git-backups\`, separate staged/unstaged patches and untracked files, verified git bundle (--all), destructive command coverage matrix, hard-deny for gc/prune, and conflict-aware restore engine. |
 | **14** | **Feedback & Wrong-Rating Queue** | 🟡 PARTIAL | `flag_events` table and schema exist in `storage/db.py`. Review interface and dataset update queue scheduled for Milestone 4. |
@@ -60,7 +60,8 @@ Status definitions:
   - [x] **Task 1.1:** Content-Addressed Blob Store & File History / Version Control (`core/blob_store.py`, `core/version_control.py`) — **COMPLETED & TESTED**
   - [x] **Task 1.2:** Durable Journal Ingestion & Audit Engine (`storage/journal.py`) — **COMPLETED & TESTED**
   - [x] **Task 1.3:** Git Safety Net & Bare Backup Store (`core/git_safety.py`) — **COMPLETED & TESTED**
-- [ ] **Milestone 2: Previews, Impact Analysis & Approval Safeguards** (Features 5, 9, 10, 11)
+- [x] **Milestone 2: Previews, Impact Analysis & Approval Safeguards** (Features 5, 9, 10, 11) — **COMPLETED & TESTED**
+- [ ] **Milestone 3: Intelligent Runtime Safety & Anomaly Detection** (Features 2, 4, 12)
 - [ ] **Milestone 3: Intelligent Runtime Safety & Anomaly Detection** (Features 2, 4, 12)
 - [ ] **Milestone 4: Operational Dashboard, Provenance, Feedback & Export** (Features 14, 15, 16)
 - [ ] **Milestone 5: Host-Level Security Integration & Live Agent Verification** (Phase 0 / Phase 1 OS boundaries and Claude Code installation)

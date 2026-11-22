@@ -133,3 +133,39 @@
    - **130 tests collected across entire repository**: **124 passed, 6 xpassed, 0 failed**.
    - Pass rate: 100%. Test runtime: ~21.6 seconds.
    - Milestone 1 (**Storage, Retention & Recovery**) is 100% complete.
+
+---
+
+## Session 5 — 2026-11-22: Milestone 2 Implementation (Previews, Impact Analysis & Approval Safeguards)
+
+### User Guidance Received
+- Proceed through the roadmap autonomously without per-task design pauses.
+- Implement Milestone 2 covering Features 5, 9, 10, and 11.
+- Ensure all tests pass cleanly before milestone commit.
+
+### Completed Work
+
+1. **Explicit High-Risk Typed Approvals (`core/policy_resolver.py` & `storage/db.py`, Feature 9)**
+   - Added `_CRITICAL_PATTERNS` to detect privilege elevation (`sudo`, `gsudo`, `runas`), download-and-execute pipelines (`curl | bash`), destructive disk operations (`mkfs`, `fdisk`), `.git` removal, and force-pushing to protected branches (`main`, `master`, `prod`).
+   - Escalates effective tier to `RiskTier.CRITICAL` and sets `requires_typed_confirmation = True`.
+   - Updated `storage/db.py::decide_action()` to strictly enforce `typed_confirmation == "YES"`. Rejects lowercase `"yes"`, partial inputs, or empty confirmations.
+   - Hard-deny checks remain strictly unapprovable even with typed "YES".
+
+2. **Sandbox & Dry-Run Preview (`core/preview.py`, Feature 10)**
+   - Added blast radius modeling (`files_affected_count`, `estimated_bytes`, `is_reversible`).
+   - Bound blast radius into deterministic `preview_hash = SHA256(...)`.
+   - Added `verify_preview_fingerprints()` to detect whether target files shifted state between preview generation and execution authorization.
+
+3. **Impact Analysis & Safety Score (`core/impact_report.py`, Feature 11)**
+   - Implemented `compute_safety_score()` calculating composite rating (0 to 100) based on reversibility, scope boundedness, target sensitivity, and predictability.
+   - Categorizes actions into `SAFE`, `CAUTION`, `DANGEROUS`, or `CRITICAL`.
+
+4. **Dashboard Integration (`dashboard/app.py`, Feature 5)**
+   - Updated `/resolve/<id>/<decision>` to parse `typed_confirmation` and reject CRITICAL actions lacking `"YES"`.
+   - Added `/action/<id>` endpoint providing full preview, blast radius, and safety score details.
+
+5. **Testing & Verification**
+   - Authored unit test suite in `tests/test_milestone2.py` (9 tests, all passed).
+   - Executed full test suite across entire repository: **139 tests collected: 133 passed, 6 xpassed, 0 failed**.
+   - Pass rate: 100%. Test runtime: ~15.2 seconds.
+   - Milestone 2 (**Previews, Impact Analysis & Approval Safeguards**) is 100% complete.

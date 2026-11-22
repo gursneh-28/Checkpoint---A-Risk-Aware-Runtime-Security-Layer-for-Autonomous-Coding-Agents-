@@ -284,3 +284,58 @@ def build_backup_plan(manifest: ImpactManifest) -> BackupPlan:
     )
     plan.compute_hash()
     return plan
+
+
+def compute_safety_score(manifest: ImpactManifest) -> Dict[str, Any]:
+    """
+    Compute a composite safety score (0 to 100) based on:
+    - Reversibility (+40 if reversible)
+    - Target scope boundedness (+30 if count <= 10 and size <= 10 MB)
+    - Sensitivity (+20 if no sensitive files/dirs targeted)
+    - Predictability (+10 if has_unknown_effects is False)
+    """
+    score = 0
+    factors = []
+
+    if manifest.is_reversible:
+        score += 40
+        factors.append("Action effects are reversible (+40)")
+    else:
+        factors.append("Action is destructive / irreversible (+0)")
+
+    if not manifest.has_unknown_effects:
+        score += 10
+        factors.append("Predictable impact scope (+10)")
+    else:
+        factors.append("Unknown or unresolvable effects (+0)")
+
+    has_sensitive = any(t.is_sensitive for t in manifest.targets)
+    if not has_sensitive:
+        score += 20
+        factors.append("No sensitive files or credentials targeted (+20)")
+    else:
+        factors.append("Sensitive files or keys targeted (+0)")
+
+    if manifest.total_item_count <= 10 and manifest.total_size_bytes <= 10 * 1024 * 1024:
+        score += 30
+        factors.append("Bounded impact radius (<= 10 files, <= 10MB) (+30)")
+    elif manifest.total_item_count <= 50:
+        score += 15
+        factors.append("Moderate impact radius (+15)")
+    else:
+        factors.append("Broad or unbounded impact radius (+0)")
+
+    if score >= 80:
+        rating = "SAFE"
+    elif score >= 50:
+        rating = "CAUTION"
+    elif score >= 30:
+        rating = "DANGEROUS"
+    else:
+        rating = "CRITICAL"
+
+    return {
+        "score": score,
+        "rating": rating,
+        "factors": factors,
+    }

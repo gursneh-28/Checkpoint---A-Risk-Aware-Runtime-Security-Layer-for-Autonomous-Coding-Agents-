@@ -137,10 +137,40 @@
 
 ---
 
+## Feature 9 — Explicit High-Risk Typed Approvals
+
+| Sub-feature | Status | Notes |
+|------------|--------|-------|
+| CRITICAL tier policy classification | ✅ DONE | `core/policy_resolver.py`: Privilege elevation, download/sh, disk formatting, .git removal, protected branch force-push |
+| Typed "YES" confirmation gate | ✅ DONE | `storage/db.py`: `decide_action()` enforces exact string "YES" (rejects lowercase "yes" or blank) |
+| Hard-deny non-overrideable | ✅ DONE | Hard-deny conditions cannot be approved even by typing "YES" |
+
+---
+
+## Feature 10 — Sandbox & Dry-Run Preview
+
+| Sub-feature | Status | Notes |
+|------------|--------|-------|
+| Plain-language preview generation | ✅ DONE | `core/preview.py`: Human-readable summary of what will happen |
+| Deterministic preview_hash | ✅ DONE | SHA-256 binding headline, details, effects, and blast radius |
+| Blast radius modeling | ✅ DONE | Computes affected files, estimated bytes, and reversibility rating |
+| Target state fingerprint check | ✅ DONE | `verify_preview_fingerprints()` detects on-disk shifts before execution |
+
+---
+
+## Feature 11 — Impact Analysis & Safety Score
+
+| Sub-feature | Status | Notes |
+|------------|--------|-------|
+| Impact manifest modeling | ✅ DONE | `core/impact_report.py`: Tracks targets, sizes, counts, and sensitivity |
+| Composite safety score (0-100) | ✅ DONE | `compute_safety_score()` rates reversibility, boundedness, and sensitivity |
+
+---
+
 ## Baseline Test Suite Summary
 
-- **Total tests:** 130
-- **Passed:** 124
+- **Total tests:** 139
+- **Passed:** 133
 - **XPassed (expected model improvements):** 6
 - **Failed:** 0
 - **Pass Rate:** 100%

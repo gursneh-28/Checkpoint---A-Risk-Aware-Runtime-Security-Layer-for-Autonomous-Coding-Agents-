@@ -53,8 +53,38 @@ def resolve(action_id, decision):
     check_csrf()
     if decision not in DECISIONS:
         abort(400)
-    decide_action(action_id, DECISIONS[decision])
+    typed = request.form.get("typed_confirmation")
+    success = decide_action(action_id, DECISIONS[decision], typed_confirmation=typed)
+    if not success and decision == "approve":
+        actions = get_all_actions()
+        action_row = next((r for r in actions if r[0] == action_id), None)
+        if action_row:
+            eff = action_row[11] if len(action_row) > 11 else ""
+            base = action_row[4] if len(action_row) > 4 else ""
+            if eff == "CRITICAL" or base == "CRITICAL":
+                abort(400)
     return redirect(url_for("dashboard"))
+
+
+@app.route("/action/<int:action_id>")
+def action_detail(action_id):
+    init_db()
+    actions = get_all_actions()
+    action_row = next((r for r in actions if r[0] == action_id), None)
+    if not action_row:
+        abort(404)
+    suggestion = json.loads(action_row[7]) if len(action_row) > 7 and action_row[7] else None
+    return {
+        "id": action_row[0],
+        "timestamp": action_row[1],
+        "action_type": action_row[2],
+        "command": action_row[3],
+        "risk_tier": action_row[4],
+        "status": action_row[5],
+        "suggestion": suggestion["text"] if suggestion else None,
+        "effective_tier": action_row[11] if len(action_row) > 11 else action_row[4],
+        "preview_hash": action_row[12] if len(action_row) > 12 else "",
+    }
 
 @app.route("/checkpoints")
 def checkpoints():

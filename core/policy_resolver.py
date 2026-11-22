@@ -40,6 +40,7 @@ class PolicyResolution:
     escalation_reasons: List[str] = field(default_factory=list)
     hard_deny_reasons:  List[HardDenyReason] = field(default_factory=list)
     is_hard_deny:     bool = False
+    requires_typed_confirmation: bool = False
     policy_version:   str  = "1"
     resolution_hash:  str  = ""  # filled in by resolve()
 
@@ -78,6 +79,17 @@ def _touches_checkpoint_storage(command: Optional[str], file_path: Optional[str]
             if marker in t:
                 return True
     return False
+
+
+import re
+
+_CRITICAL_PATTERNS = [
+    (re.compile(r'\b(sudo|gsudo|runas|su)\b', re.IGNORECASE), "Privilege elevation detected"),
+    (re.compile(r'\b(curl|wget)\b[^|;&\n]*\|\s*(bash|sh|zsh|python|perl)\b', re.IGNORECASE), "Download and execute pipeline detected"),
+    (re.compile(r'\b(mkfs|fdisk|diskpart|format)\b', re.IGNORECASE), "Destructive disk or volume operation detected"),
+    (re.compile(r'\b(rm|del|remove-item)\b[^|;&\n]*\.git\b', re.IGNORECASE), "Destructive removal of repository .git directory"),
+    (re.compile(r'\bgit\s+push\b[^|;&\n]*(-f|--force|\+)[^|;&\n]*(main|master|prod|production)\b', re.IGNORECASE), "Force-pushing to protected remote branch"),
+]
 
 
 def _is_unbounded_destructive(command: Optional[str]) -> bool:
@@ -164,6 +176,12 @@ def resolve(
         hard_denies.add(HardDenyReason.UNBOUNDED_DESTRUCTIVE)
         add_reason("Command scope is unbounded or unresolvable (e.g. rm -rf /)")
 
+    # --- CRITICAL policy checks ---
+    if command:
+        for pat, desc in _CRITICAL_PATTERNS:
+            if pat.search(command):
+                add_reason(desc, escalate_to=RiskTier.CRITICAL)
+
     # --- Provenance escalation ---
     if provenance and provenance.has_untrusted_input:
         for src in provenance.sources:
@@ -212,6 +230,7 @@ def resolve(
         escalation_reasons=reasons,
         hard_deny_reasons=list(hard_denies),
         is_hard_deny=is_hard_deny,
+        requires_typed_confirmation=(effective == RiskTier.CRITICAL),
     )
 
     # Deterministic hash of this resolution (bound to approvals)
