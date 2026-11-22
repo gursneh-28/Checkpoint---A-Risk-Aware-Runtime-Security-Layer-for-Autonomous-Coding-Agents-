@@ -50,13 +50,24 @@ _SECRET_PATTERNS = [
     re.compile(r'(password|passwd|secret|token|api[_-]?key|private[_-]?key'
                r'|access[_-]?key|auth[_-]?token)\s*[:=]\s*\S+', re.IGNORECASE),
     re.compile(r'[A-Za-z0-9+/]{40,}={0,2}'),  # long base64-like strings
+    # curl/wget -u user:password  (-u or --user flag)
+    re.compile(r'(-u\s+\S+?:|--user\s+\S+?:)(\S+)', re.IGNORECASE),
+    # Bearer / Basic auth tokens inline
+    re.compile(r'(?i)(Bearer|Basic)\s+[A-Za-z0-9+/=_\-]{8,}'),
 ]
 
 
 def _scrub_secrets(text: str) -> str:
     """Replace apparent secrets with <REDACTED>."""
-    for pat in _SECRET_PATTERNS:
-        text = pat.sub(lambda m: m.group(0)[:m.start(1) - m.start(0)] + "<REDACTED>", text)
+    for i, pat in enumerate(_SECRET_PATTERNS):
+        if i == 2:
+            # curl -u user:password pattern — group 2 is the password, keep group 1 (user prefix)
+            text = pat.sub(lambda m: m.group(1) + "<REDACTED>", text)
+        elif i == 3:
+            # Bearer / Basic token — replace everything after the scheme
+            text = pat.sub(lambda m: m.group(1) + " <REDACTED>", text)
+        else:
+            text = pat.sub(lambda m: m.group(0)[:m.start(1) - m.start(0)] + "<REDACTED>", text)
     return text
 
 
@@ -865,6 +876,48 @@ def update_alert_status(alert_id: int, status: str, delivered_at: Optional[str] 
             WHERE id = ?
         """, (status, delivered_val, ts, alert_id))
         return cur.rowcount > 0
+
+
+def get_events_since(last_event_id: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
+    """
+    Feature 15: Retrieve events strictly after last_event_id for live updates & resynchronization.
+    Performs privacy-safe scrubbing on commands and payloads.
+    Returns list of event dicts ordered by id ASC.
+    """
+    query = """
+        SELECT e.id, e.action_id, e.event_type, e.timestamp, e.payload,
+               a.command, COALESCE(a.effective_tier, a.risk_tier) as tier,
+               a.status, a.action_type, a.suggestion, a.session_id
+        FROM action_events e
+        LEFT JOIN actions a ON e.action_id = a.id
+        WHERE e.id > ?
+        ORDER BY e.id ASC
+        LIMIT ?
+    """
+    with _connect() as conn:
+        rows = conn.execute(query, (int(last_event_id), int(limit))).fetchall()
+        results = []
+        for r in rows:
+            ev_id, aid, ev_type, ts, p_str, cmd, tier, status, atype, sugg, sid = r
+            scrubbed_cmd = _scrub_secrets(cmd or "")[:200]
+            try:
+                p_obj = json.loads(p_str) if p_str else {}
+            except Exception:
+                p_obj = {}
+            results.append({
+                "id": ev_id,
+                "action_id": aid,
+                "event_type": ev_type,
+                "timestamp": ts,
+                "command": scrubbed_cmd,
+                "risk_tier": tier or "UNKNOWN",
+                "status": status or "",
+                "action_type": atype or "",
+                "suggestion": sugg or "",
+                "session_id": sid or "",
+                "payload": p_obj,
+            })
+        return results
 
 
 # ---------------------------------------------------------------------------

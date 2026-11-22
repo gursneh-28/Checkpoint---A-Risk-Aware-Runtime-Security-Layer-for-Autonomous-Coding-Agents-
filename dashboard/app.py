@@ -2,6 +2,7 @@ import sys
 import os
 import secrets
 import json
+import time
 from functools import wraps
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -18,6 +19,7 @@ from storage.db import (
     review_flag,
     export_flagged_dataset,
     get_alerts,
+    get_events_since,
 )
 from core.sandbox import rollback_checkpoint
 from core.session_summary import generate_session_summary, format_session_summary_markdown
@@ -90,7 +92,7 @@ def login_required(f):
         token = session.get("session_token")
         username = validate_session(token)
         if not username:
-            if request.path.startswith(("/action/", "/session/", "/export", "/flags", "/alerts", "/resolve", "/rollback")):
+            if request.path.startswith(("/action/", "/session/", "/export", "/flags", "/alerts", "/resolve", "/rollback", "/events")):
                 return jsonify({"error": "Unauthorized. Please log in."}), 401
             return redirect(url_for("login_view", next=request.url))
         return f(*args, **kwargs)
@@ -312,12 +314,69 @@ def export_flags():
 # ---------------------------------------------------------------------------
 
 @app.route("/alerts")
+@login_required
 def alerts_list():
     """View alerts history and delivery statuses."""
     init_db()
     pending_only = request.args.get("pending", "0") == "1"
     alerts = get_alerts(pending_only=pending_only)
     return jsonify({"alerts": alerts})
+
+
+@app.route("/events")
+@login_required
+def event_stream():
+    """
+    Feature 15: Live SSE endpoint for dashboard updates and browser notifications.
+    Supports Last-Event-ID header and last_event_id query parameter for full resynchronization.
+    Yields events in text/event-stream format:
+      id: <event_id>
+      event: <event_type>
+      data: <json_data>
+    """
+    init_db()
+    last_id = 0
+    header_id = request.headers.get("Last-Event-ID")
+    if header_id and header_id.isdigit():
+        last_id = int(header_id)
+    elif request.args.get("last_event_id", "").isdigit():
+        last_id = int(request.args.get("last_event_id"))
+
+    once = request.args.get("once", "0") == "1"
+
+    def generate(start_id: int):
+        current_id = start_id
+        seen_events = set()
+        iterations = 0
+        max_iterations = 1 if once else 120
+        while iterations < max_iterations:
+            events = get_events_since(current_id, limit=50)
+            if events:
+                for ev in events:
+                    ev_id = ev["id"]
+                    dedup_key = (ev["action_id"], ev["event_type"])
+                    if dedup_key in seen_events:
+                        continue
+                    seen_events.add(dedup_key)
+                    current_id = max(current_id, ev_id)
+                    data_json = json.dumps(ev)
+                    yield f"id: {ev_id}\nevent: {ev['event_type']}\ndata: {data_json}\n\n"
+            else:
+                yield ": ping\n\n"
+            if once:
+                break
+            time.sleep(0.5)
+            iterations += 1
+
+    return Response(
+        generate(last_id),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        }
+    )
 
 
 # ---------------------------------------------------------------------------

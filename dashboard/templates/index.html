@@ -2,13 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="5">
     <title>Checkpoint — Activity Dashboard</title>
     <style>
         body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; background: #f5f7fa; color: #1a1a1a; margin: 0; padding: 40px; }
         h1 { color: #1F4E79; margin-bottom: 4px; }
-        .subtitle { color: #666; margin-bottom: 28px; font-size: 15px; }
-        .refresh-note { font-size: 13px; color: #888; margin-bottom: 20px; }
+        .subtitle { color: #666; margin-bottom: 20px; font-size: 15px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 13.5px; }
+        .refresh-note { color: #888; }
+        .live-pill { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #2E7D32; font-size: 13px; }
+        .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #2E7D32; animation: pulse 1.8s infinite; }
+        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+        .notify-btn { background: #1F4E79; color: white; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+        .notify-btn:hover { background: #153754; }
         table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
         th { background: #1F4E79; color: white; text-align: left; padding: 12px 16px; font-size: 14px; }
         td { padding: 12px 16px; border-bottom: 1px solid #eee; font-size: 14px; vertical-align: top; }
@@ -18,11 +23,13 @@
         .risk-LOW { background: #E7F6E7; color: #2E7D32; }
         .risk-MEDIUM { background: #FFF6DC; color: #8a6d00; }
         .risk-HIGH { background: #FBE4E4; color: #B00020; }
+        .risk-CRITICAL { background: #7A0010; color: white; }
         .status-executed { background: #E7F6E7; color: #2E7D32; }
         .status-blocked { background: #FBE4E4; color: #B00020; }
         .status-rejected { background: #FBE4E4; color: #B00020; }
         .status-pending { background: #FFF0DA; color: #B5651D; }
         .status-approved { background: #E7F6E7; color: #2E7D32; }
+        .status-stale { background: #F0F0F0; color: #777; }
         .status-alternative, .status-executed-alternative { background: #E3EEF9; color: #1F4E79; }
         .action-buttons a, .action-buttons button { display: inline-block; padding: 5px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 600; text-decoration: none; margin-right: 6px; border: none; cursor: pointer; font-family: inherit; }
         .btn-approve { background: #2E7D32; color: white; }
@@ -37,47 +44,169 @@
 <body>
     <h1>Checkpoint — Activity Dashboard</h1>
     <div class="subtitle">Every action a coding agent has attempted, and what Checkpoint decided to do about it.</div>
-    <div class="refresh-note">This page refreshes automatically every 5 seconds. &nbsp;|&nbsp; <a href="{{ url_for('checkpoints') }}" style="color:#1F4E79;">View Rollback History &rarr;</a></div>
+    
+    <div class="top-bar">
+        <div class="refresh-note">
+            <span class="live-pill"><span class="live-dot"></span> Live Stream Active</span>
+            &nbsp;|&nbsp; <a href="{{ url_for('checkpoints') }}" style="color:#1F4E79;">View Rollback History &rarr;</a>
+        </div>
+        <div id="notify-container">
+            <button id="notify-perm-btn" class="notify-btn" onclick="requestNotificationPermission()">🔔 Enable Browser Notifications</button>
+        </div>
+    </div>
 
-    {% if actions %}
-    <table>
-        <tr>
-            <th>Time</th><th>Type</th><th>Action</th><th>Risk Level</th><th>What Happened</th><th>Decision</th>
-        </tr>
-        {% for a in actions %}
-        <tr>
-            <td class="timestamp-cell">{{ a.timestamp.split("T")[1].split(".")[0] }}</td>
-            <td>{{ a.action_type }}</td>
-            <td class="command-cell">{{ a.command }}
-                {% if a.status == "pending" and a.suggestion %}
-                <div class="suggestion-box"><strong>Safer option:</strong> {{ a.suggestion }}</div>
-                {% endif %}
-            </td>
-            <td><span class="badge risk-{{ a.risk_tier }}">{{ a.risk_tier }}</span></td>
-            <td><span class="badge status-{{ a.status }}">{{ a.status }}</span></td>
-            <td class="action-buttons">
-                {% if a.status == "pending" %}
-                <form method="post" action="{{ url_for('resolve', action_id=a.id, decision='approve') }}" style="display:inline">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn-approve">Approve</button>
-                </form>
-                <form method="post" action="{{ url_for('resolve', action_id=a.id, decision='reject') }}" style="display:inline">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn-reject">Reject</button>
-                </form>
-                {% if a.suggestion %}
-                <form method="post" action="{{ url_for('resolve', action_id=a.id, decision='alternative') }}" style="display:inline">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn-alt">Do this instead</button>
-                </form>
-                {% endif %}
-                {% else %}&mdash;{% endif %}
-            </td>
-        </tr>
-        {% endfor %}
+    <table id="actions-table" {% if not actions %}style="display:none;"{% endif %}>
+        <thead>
+            <tr>
+                <th>Time</th><th>Type</th><th>Action</th><th>Risk Level</th><th>What Happened</th><th>Decision</th>
+            </tr>
+        </thead>
+        <tbody id="actions-body">
+            {% for a in actions %}
+            <tr id="action-row-{{ a.id }}">
+                <td class="timestamp-cell">{{ a.timestamp.split("T")[1].split(".")[0] }}</td>
+                <td>{{ a.action_type }}</td>
+                <td class="command-cell">{{ a.command }}
+                    {% if a.status == "pending" and a.suggestion %}
+                    <div class="suggestion-box"><strong>Safer option:</strong> {{ a.suggestion }}</div>
+                    {% endif %}
+                </td>
+                <td><span class="badge risk-{{ a.risk_tier }}">{{ a.risk_tier }}</span></td>
+                <td><span class="badge status-{{ a.status }}" id="status-badge-{{ a.id }}">{{ a.status }}</span></td>
+                <td class="action-buttons" id="action-buttons-{{ a.id }}">
+                    {% if a.status == "pending" %}
+                    <form method="post" action="{{ url_for('resolve', action_id=a.id, decision='approve') }}" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-approve">Approve</button>
+                    </form>
+                    <form method="post" action="{{ url_for('resolve', action_id=a.id, decision='reject') }}" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-reject">Reject</button>
+                    </form>
+                    {% if a.suggestion %}
+                    <form method="post" action="{{ url_for('resolve', action_id=a.id, decision='alternative') }}" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-alt">Do this instead</button>
+                    </form>
+                    {% endif %}
+                    {% else %}&mdash;{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
-    {% else %}
-    <div class="empty-state">No actions logged yet — run the interceptor or file_ops to see activity here.</div>
-    {% endif %}
+
+    <div id="empty-state-view" class="empty-state" {% if actions %}style="display:none;"{% endif %}>
+        No actions logged yet — run the interceptor or file_ops to see activity here.
+    </div>
+
+    <script>
+        // Feature 15: Browser Notification Permission & Dispatch
+        function updateNotifyButton() {
+            const btn = document.getElementById("notify-perm-btn");
+            if (!("Notification" in window)) {
+                btn.style.display = "none";
+                return;
+            }
+            if (Notification.permission === "granted") {
+                btn.innerText = "✓ Notifications Active";
+                btn.disabled = true;
+                btn.style.background = "#2E7D32";
+            } else if (Notification.permission === "denied") {
+                btn.innerText = "✕ Notifications Blocked";
+                btn.disabled = true;
+                btn.style.background = "#888";
+            }
+        }
+        updateNotifyButton();
+
+        function requestNotificationPermission() {
+            if ("Notification" in window) {
+                Notification.requestPermission().then(() => updateNotifyButton());
+            }
+        }
+
+        // Live SSE Streaming and Deduplication
+        const processedEvents = new Set();
+
+        function handleIncomingEvent(ev) {
+            if (!ev || !ev.action_id) return;
+            const dedupKey = ev.action_id + ":" + ev.event_type;
+            if (processedEvents.has(dedupKey)) return;
+            processedEvents.add(dedupKey);
+
+            // Desktop notification on approval requested or expired
+            if ("Notification" in window && Notification.permission === "granted") {
+                if (ev.event_type === "approval_requested") {
+                    new Notification("Checkpoint: Approval Required [" + ev.risk_tier + "]", {
+                        body: "Action #" + ev.action_id + ": " + ev.command.slice(0, 80),
+                        tag: "action_req_" + ev.action_id
+                    });
+                } else if (ev.event_type === "approval_expired") {
+                    new Notification("Checkpoint: Approval Expired", {
+                        body: "Action #" + ev.action_id + " timed out after 300s.",
+                        tag: "action_exp_" + ev.action_id
+                    });
+                }
+            }
+
+            // Update UI row if existing
+            const existingRow = document.getElementById("action-row-" + ev.action_id);
+            if (existingRow) {
+                const badge = document.getElementById("status-badge-" + ev.action_id);
+                if (badge && ev.status) {
+                    badge.className = "badge status-" + ev.status;
+                    badge.innerText = ev.status;
+                }
+                const btnCell = document.getElementById("action-buttons-" + ev.action_id);
+                if (btnCell && ev.status !== "pending") {
+                    btnCell.innerHTML = "&mdash;";
+                }
+            } else if (ev.command) {
+                // Insert new row if table exists or switch from empty state
+                const table = document.getElementById("actions-table");
+                const tbody = document.getElementById("actions-body");
+                const emptyView = document.getElementById("empty-state-view");
+                if (table && tbody) {
+                    table.style.display = "";
+                    if (emptyView) emptyView.style.display = "none";
+
+                    const tr = document.createElement("tr");
+                    tr.id = "action-row-" + ev.action_id;
+                    const timePart = (ev.timestamp && ev.timestamp.includes("T")) 
+                        ? ev.timestamp.split("T")[1].split(".")[0] 
+                        : "Just now";
+                    tr.innerHTML = `
+                        <td class="timestamp-cell">${timePart}</td>
+                        <td>${ev.action_type || 'bash'}</td>
+                        <td class="command-cell">${ev.command}</td>
+                        <td><span class="badge risk-${ev.risk_tier}">${ev.risk_tier}</span></td>
+                        <td><span class="badge status-${ev.status}" id="status-badge-${ev.action_id}">${ev.status}</span></td>
+                        <td class="action-buttons" id="action-buttons-${ev.action_id}">&mdash;</td>
+                    `;
+                    tbody.insertBefore(tr, tbody.firstChild);
+                }
+            }
+        }
+
+        // Initialize EventSource
+        if ("EventSource" in window) {
+            const evtSource = new EventSource("/events");
+            evtSource.onmessage = function(e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    handleIncomingEvent(data);
+                } catch(err) {}
+            };
+            ["approval_requested", "decision_recorded", "approval_expired", "flagged"].forEach(et => {
+                evtSource.addEventListener(et, function(e) {
+                    try {
+                        const data = JSON.parse(e.data);
+                        handleIncomingEvent(data);
+                    } catch(err) {}
+                });
+            });
+        }
+    </script>
 </body>
 </html>
