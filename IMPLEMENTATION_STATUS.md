@@ -105,10 +105,42 @@
 
 ---
 
+## Feature 8 — Full Action Log & Durable Journal
+
+| Sub-feature | Status | Notes |
+|------------|--------|-------|
+| Durable journal drop-folder | ✅ DONE | `storage/journal.py`: Atomic write (.tmp -> .journal) with fsync |
+| Append-only event store | ✅ DONE | SQLite triggers block DELETE and modification of cryptographic fields |
+| Canonical event hashing ("1") | ✅ DONE | Deterministic SHA-256 hash binding all security-relevant fields |
+| Ingestion & sequence buffering | ✅ DONE | Grace period buffers out-of-order files; unblocking missing sequences |
+| Gap detection & session pause | ✅ DONE | Gap timeout pauses session; logs `session_sequence_gap` event |
+| Late arrival absorption | ✅ DONE | Late events absorbed at chain tail preserving session sequence; explicit resume required |
+| Acyclic tombstone redaction | ✅ DONE | Directional tombstone events, scrubbed payloads, verifiable hash continuity |
+| Chain-head anchoring & reconciliation | ✅ DONE | `ChainHeadAnchor` interface with atomic `FileChainHeadAnchor` & rollback detection |
+| Query read API with pagination | ✅ DONE | `query_events()` supports filters (session, action, event_type, date, pagination) |
+
+---
+
+## Feature 13 — Git Safety Net
+
+| Sub-feature | Status | Notes |
+|------------|--------|-------|
+| External bare backup store | ✅ DONE | Stored outside project under `%LOCALAPPDATA%\Checkpoint\git-backups\` |
+| Separate staged/unstaged snapshots | ✅ DONE | `core/git_safety.py`: Separate staged patch, unstaged patch, and untracked files |
+| Verified git bundle (--all) | ✅ DONE | Full ref bundle created and verified via `git bundle verify` |
+| Controlled Git environment | ✅ DONE | Safe env overrides hostile hooks, pagers, prompts, and external diffs |
+| Coverage matrix validation | ✅ DONE | Blocks destructive operations if required coverage categories are absent |
+| Hard-deny commands in v1 | ✅ DONE | `git gc --prune` and `git reflog expire` unconditionally blocked |
+| Stale snapshot blocking | ✅ DONE | Snapshots older than 300s are rejected for destructive commands |
+| Conflict-aware restore engine | ✅ DONE | Checks active uncommitted modifications before restoring patches and untracked files |
+| Shared quota accounting | ✅ DONE | External git backup bytes count toward Option A 2 GB quota |
+
+---
+
 ## Baseline Test Suite Summary
 
-- **Total tests:** 106
-- **Passed:** 100
+- **Total tests:** 130
+- **Passed:** 124
 - **XPassed (expected model improvements):** 6
 - **Failed:** 0
 - **Pass Rate:** 100%

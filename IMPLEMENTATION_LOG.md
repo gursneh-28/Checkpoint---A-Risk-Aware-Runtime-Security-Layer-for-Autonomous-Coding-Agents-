@@ -94,3 +94,42 @@
 4. **Testing & Verification**
    - Authored comprehensive test suite in `tests/test_version_control.py` (10 tests).
    - Executed full test suite: **106 tests collected: 100 passed, 6 xpassed, 0 failed**.
+
+---
+
+## Session 4 — 2026-11-22: Milestone 1 Completion (Tasks 1.2 & 1.3)
+
+### User Guidance Received
+- Treat v2.3 specification as authoritative implementation guide; proceed autonomously through remaining features without pausing for per-task design approvals.
+- Preserve implementation order: main application features first, deferring OS-level administrative tasks and live Claude Code hooks until the application is complete.
+- Complete Task 1.2 (Durable Journal Ingestion & Audit Engine) and Task 1.3 (Git Safety Net & Bare Backup Store).
+- Verify every milestone with dedicated and full test suites before committing locally.
+
+### Completed Work
+
+1. **Durable Journal Ingestion & Audit Engine (`storage/journal.py`, Feature 8)**
+   - Implemented `JournalManager` with write-ahead drop-folder logging via atomic `.tmp` -> `.journal` rename with `os.fsync`.
+   - Ingestion under SQLite WAL mode with `BEGIN IMMEDIATE` exclusive locking.
+   - Global cryptographic hash chain linking (`prev_hash` -> `event_hash`) using versioned canonical serialization format (`hash_version="1"`).
+   - Monotonic session sequencing with drop-folder buffering and grace-period handling for out-of-order deliveries.
+   - Gap detection: flags `session_sequence_gap` and pauses session; absorbs late deliveries at the global chain tail while maintaining session pause until explicit administrative resume.
+   - Directional, acyclic tombstone redaction: scrubs sensitive payload, creates `"tombstone"` audit event, and preserves target's `payload_hash`, `prev_hash`, and `event_hash` for continuous integrity verification.
+   - Chain-head anchoring (`ChainHeadAnchor`) with atomic local file implementation (`FileChainHeadAnchor`) and startup reconciliation to detect database rollbacks or tail truncations.
+   - SQLite append-only triggers blocking `DELETE` and direct updates to cryptographic fields.
+   - Authored unit test suite in `tests/test_journal.py` (15 tests, all passed).
+
+2. **Git Safety Net & Bare Backup Store (`core/git_safety.py`, Feature 13)**
+   - Implemented `GitSafetyNet` storing external repository snapshots in `%LOCALAPPDATA%\Checkpoint\git-backups\`.
+   - Separate extraction of staged patch (`git diff --cached HEAD`), unstaged patch (`git diff`), untracked files, and full ref bundle (`git bundle create --all`).
+   - Controlled Git execution environment (`get_safe_git_env`) ignoring hostile local repository hooks, pagers, prompts, and external diff tools.
+   - Destructive command coverage matrix (`REQUIRED_COVERAGE_MATRIX`): strictly verifies that an external snapshot covers every state category a command can destroy before allowing execution.
+   - Hard-deny enforcement: unconditionally blocks `git gc --prune` and `git reflog expire`.
+   - Freshness checks: rejects snapshots older than 300 seconds for destructive operations.
+   - Conflict-aware restore engine with separate worktree and ref restoration.
+   - Shared quota tracking: external git backup bytes count toward Option A 2 GB shared quota.
+   - Authored unit test suite in `tests/test_git_safety.py` (9 tests, all passed).
+
+3. **Full Suite Regression & Milestone Boundary Verification**
+   - **130 tests collected across entire repository**: **124 passed, 6 xpassed, 0 failed**.
+   - Pass rate: 100%. Test runtime: ~21.6 seconds.
+   - Milestone 1 (**Storage, Retention & Recovery**) is 100% complete.

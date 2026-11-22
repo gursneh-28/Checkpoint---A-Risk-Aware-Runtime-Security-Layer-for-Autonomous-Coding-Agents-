@@ -117,13 +117,31 @@ def init_db():
         );
 
         CREATE TABLE IF NOT EXISTS action_events (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            action_id   INTEGER NOT NULL REFERENCES actions(id),
-            event_type  TEXT NOT NULL,
-            timestamp   TEXT NOT NULL,
-            payload     TEXT,
-            prev_hash   TEXT NOT NULL DEFAULT '',
-            event_hash  TEXT NOT NULL
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            journal_event_id    TEXT UNIQUE,
+            global_seq          INTEGER UNIQUE,
+            session_id          TEXT NOT NULL DEFAULT '',
+            session_seq         INTEGER,
+            tool_use_id         TEXT NOT NULL DEFAULT '',
+            action_id           INTEGER REFERENCES actions(id),
+            event_type          TEXT NOT NULL,
+            timestamp           TEXT NOT NULL,
+            payload             TEXT NOT NULL,
+            payload_hash        TEXT NOT NULL DEFAULT '',
+            prev_hash           TEXT NOT NULL DEFAULT '',
+            event_hash          TEXT NOT NULL UNIQUE,
+            hash_version        TEXT NOT NULL DEFAULT '1',
+            is_redacted         INTEGER NOT NULL DEFAULT 0,
+            tombstone_event_id  INTEGER REFERENCES action_events(id),
+            redacted_at         TEXT,
+            redaction_reason    TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS session_states (
+            session_id          TEXT PRIMARY KEY,
+            state               TEXT NOT NULL DEFAULT 'active',
+            paused_at           TEXT,
+            pause_reason        TEXT
         );
 
         CREATE TABLE IF NOT EXISTS action_files (
@@ -229,11 +247,27 @@ def _upgrade_schema():
             ("backup_hash",    "TEXT"),
             ("policy_version", "TEXT DEFAULT '1'"),
             ("cwd",            "TEXT DEFAULT ''"),
+        ],
+        "action_events": [
+            ("journal_event_id",   "TEXT"),
+            ("global_seq",         "INTEGER"),
+            ("session_id",         "TEXT DEFAULT ''"),
+            ("session_seq",        "INTEGER DEFAULT 0"),
+            ("tool_use_id",        "TEXT DEFAULT ''"),
+            ("payload_hash",       "TEXT DEFAULT ''"),
+            ("hash_version",       "TEXT DEFAULT '1'"),
+            ("is_redacted",        "INTEGER DEFAULT 0"),
+            ("tombstone_event_id", "INTEGER REFERENCES action_events(id)"),
+            ("redacted_at",        "TEXT"),
+            ("redaction_reason",   "TEXT"),
         ]
     }
     with _connect() as conn:
         for table, cols in new_cols.items():
-            existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+            try:
+                existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+            except sqlite3.OperationalError:
+                continue
             for col_name, col_type in cols:
                 if col_name not in existing:
                     try:
@@ -268,10 +302,77 @@ def _last_event_hash(conn: sqlite3.Connection, action_id: int) -> str:
 
 def _append_event(conn: sqlite3.Connection, action_id: int,
                   event_type: str, payload: Dict[str, Any] = None) -> str:
-    """Append an event to the hash chain.  Returns the new event hash."""
-    ts       = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    payload_str = json.dumps(payload or {})
-    prev    = _last_event_hash(conn, action_id)
+    """Append an event to the hash chain. Returns the new event hash."""
+    ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    payload = payload or {}
+
+    try:
+        from storage.journal import (
+            compute_payload_hash, compute_event_hash, canonical_payload_json,
+            GENESIS_HASH, HASH_VERSION
+        )
+        import uuid
+
+        p_hash = compute_payload_hash(payload)
+        canonical_p = canonical_payload_json(payload)
+
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(action_events)")}
+        if "global_seq" in cols:
+            row_h = conn.execute(
+                "SELECT global_seq, event_hash FROM action_events ORDER BY global_seq DESC LIMIT 1"
+            ).fetchone()
+            if row_h and row_h[0] is not None:
+                g_seq = row_h[0] + 1
+                prev = row_h[1]
+            else:
+                g_seq = 1
+                prev = GENESIS_HASH
+
+            sess_id = ""
+            tool_id = ""
+            if action_id:
+                row_act = conn.execute("SELECT session_id, tool_use_id FROM actions WHERE id=?", (action_id,)).fetchone()
+                if row_act:
+                    sess_id = row_act[0] or ""
+                    tool_id = row_act[1] or ""
+
+            sess_seq = 0
+            if sess_id:
+                row_s = conn.execute(
+                    "SELECT COALESCE(MAX(session_seq), 0) + 1 FROM action_events WHERE session_id=?",
+                    (sess_id,)
+                ).fetchone()
+                sess_seq = row_s[0]
+
+            j_id = uuid.uuid4().hex
+            ev_hash = compute_event_hash(
+                hash_version=HASH_VERSION,
+                global_seq=g_seq,
+                session_id=sess_id,
+                session_seq=sess_seq,
+                tool_use_id=tool_id,
+                action_id=action_id,
+                event_type=event_type,
+                timestamp=ts,
+                prev_hash=prev,
+                payload_hash=p_hash,
+            )
+
+            conn.execute("""
+                INSERT INTO action_events
+                  (journal_event_id, global_seq, session_id, session_seq, tool_use_id,
+                   action_id, event_type, timestamp, payload, payload_hash, prev_hash,
+                   event_hash, hash_version, is_redacted)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+            """, (j_id, g_seq, sess_id, sess_seq, tool_id, action_id, event_type, ts, canonical_p, p_hash, prev, ev_hash, HASH_VERSION))
+            return ev_hash
+
+    except Exception:
+        pass
+
+    # Fallback to simple hash if new schema columns not active
+    payload_str = json.dumps(payload)
+    prev = _last_event_hash(conn, action_id)
     ev_hash = _compute_event_hash(action_id, event_type, ts, payload_str, prev)
     conn.execute("""
         INSERT INTO action_events (action_id, event_type, timestamp, payload, prev_hash, event_hash)
