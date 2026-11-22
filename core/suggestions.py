@@ -33,7 +33,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 CHAIN_RE     = re.compile(r"&&|\|\||;|\|")
 _PIPE_SH_RE  = re.compile(r"\|\s*(sudo\s+)?(ba|z|da|k)?sh\b", re.IGNORECASE)
 
-# Dev/test fallback trash dir
+# Dev/test fallback trash dir — only used when CHECKPOINT_DEV_MODE=1.
+# In production mode, _get_trash_dir() raises SecurityConfigurationError instead.
 _DEV_TRASH_DIR = os.path.join(os.path.dirname(__file__), "..", "storage", "trash")
 
 
@@ -59,8 +60,14 @@ def _get_trash_dir(path: str) -> str:
     """
     Return the per-volume protected trash directory for `path`.
     On Windows: <volume_root>\\.checkpoint-trash\\<volume_serial>
-    Fallback: storage/trash (dev/test)
+    Fallback: storage/trash (dev mode only — gated by CHECKPOINT_DEV_MODE=1)
+
+    In production mode (CHECKPOINT_DEV_MODE not set), if the volume trash path
+    cannot be determined, raises SecurityConfigurationError rather than silently
+    redirecting to unprotected workspace storage.
     """
+    import os as _os
+    _dev_mode = _os.getenv("CHECKPOINT_DEV_MODE") == "1"
     try:
         abs_path = os.path.abspath(path)
         drive    = os.path.splitdrive(abs_path)[0]
@@ -70,7 +77,14 @@ def _get_trash_dir(path: str) -> str:
             return trash_dir
     except Exception:
         pass
-    return _DEV_TRASH_DIR
+    if _dev_mode:
+        return _DEV_TRASH_DIR
+    # Production — fail closed: cannot silently redirect to workspace storage.
+    from core.storage_paths import SecurityConfigurationError
+    raise SecurityConfigurationError(
+        "Cannot determine trash directory for path: could not resolve volume drive. "
+        "Set CHECKPOINT_DEV_MODE=1 to allow workspace fallback during development."
+    )
 
 
 def _same_volume(src: str, dst_dir: str) -> bool:

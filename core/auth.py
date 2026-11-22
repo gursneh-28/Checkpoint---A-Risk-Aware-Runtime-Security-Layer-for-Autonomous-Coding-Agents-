@@ -32,7 +32,18 @@ from storage.db import _connect
 # ---------------------------------------------------------------------------
 
 def get_auth_dir() -> str:
-    """Directory for sensitive auth keys."""
+    """Directory for sensitive auth keys.
+
+    Resolution order:
+      1. CHECKPOINT_AUTH_DIR env var (override for testing).
+      2. %LOCALAPPDATA%\\Checkpoint\\auth\\ (the ACL-protected secure location).
+      3. In DEVELOPMENT MODE (CHECKPOINT_DEV_MODE=1): workspace storage/auth/ fallback.
+      4. In PRODUCTION MODE: raises SecurityConfigurationError — never silently falls back.
+    """
+    import os as _os
+    from core.storage_paths import SecurityConfigurationError as _SCE
+    _dev_mode = _os.getenv("CHECKPOINT_DEV_MODE") == "1"
+
     override = os.environ.get("CHECKPOINT_AUTH_DIR")
     if override:
         os.makedirs(override, exist_ok=True)
@@ -52,10 +63,25 @@ def get_auth_dir() -> str:
         except (PermissionError, OSError):
             pass
 
-    # Fallback within storage directory
-    fallback = os.path.join(os.path.dirname(os.path.dirname(__file__)), "storage", "auth")
-    os.makedirs(fallback, exist_ok=True)
-    return fallback
+    # Secure path not available — apply mode policy.
+    if _dev_mode:
+        fallback = os.path.join(os.path.dirname(os.path.dirname(__file__)), "storage", "auth")
+        import logging as _log
+        _log.getLogger("checkpoint.auth").warning(
+            "SECURITY WARNING: Auth dir falling back to workspace storage (%s). "
+            "This is only allowed in DEVELOPMENT MODE (CHECKPOINT_DEV_MODE=1). "
+            "Keys stored here have NO OS-level ACL protection.",
+            fallback,
+        )
+        os.makedirs(fallback, exist_ok=True)
+        return fallback
+
+    # Production — fail closed.
+    raise _SCE(
+        "Cannot establish a secure auth directory under %LOCALAPPDATA%\\Checkpoint\\auth\\. "
+        "Ensure setup_security.ps1 has been run as Administrator, or set "
+        "CHECKPOINT_DEV_MODE=1 to allow workspace fallback during development."
+    )
 
 
 class PersistentKeyManager:

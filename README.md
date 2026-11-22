@@ -7,10 +7,10 @@ Checkpoint is an independent runtime security layer designed to intercept tool, 
 
 ## Current Project Status
 
-- **Development Stage:** All pre-Milestone 5 audit tasks complete (Tasks A–E). All 16 application features implemented and tested.
-- **Test Suite Status:** **179 tests passing (179 passed, 0 failed, 0 xpass)** across authentication, storage, version control, audit journal, git safety, preview, impact, anomaly, provenance, feedback, alert, notifications, expiry, and export.
-- **Current Completed Baseline:** Milestones 1–4 + post-audit Tasks A–E (**Dashboard Auth, Provenance, Approval Expiry Daemon, Live SSE Notifications, Classifier hardening**) are fully implemented and tested.
-- **Next Milestone Task:** Milestone 5 (**Host-Level Security Integration & Live Agent Verification**).
+- **Development Stage:** Milestone 5 (Stage 5A Pre-Elevation Host Security Audit Complete). All 16 application features implemented and tested.
+- **Test Suite Status:** **219 tests passing (219 passed, 5 skipped, 0 failed)** across authentication, storage, version control, audit journal, git safety, preview, impact, anomaly, provenance, feedback, alert, notifications, expiry, export, DPAPI protection, storage path enforcement, and Windows security. 5 integration tests cleanly skip until elevated setup is performed.
+- **Current Completed Baseline:** Milestones 1–4 + Tasks A–E + Milestone 5 Stage 5A pre-elevation audit and test scaffolding are fully implemented and verified.
+- **Next Milestone Task:** User authorization to run `scripts/setup_security.ps1` as Administrator for Milestone 5 Stage 5A host-level integration.
 
 ### What is Implemented vs. Simulated vs. Deferred
 
@@ -29,7 +29,7 @@ Checkpoint is an independent runtime security layer designed to intercept tool, 
 | **Feedback & Wrong-Rating Queue (Milestone 4)** | ✅ Genuinely Implemented | User flagging, review queue, journaled reviews, calibration dataset export, and immutable historical decisions (`storage/db.py`, `dashboard/app.py`). |
 | **Session Summaries & Audit Export (Milestone 4)** | ✅ Genuinely Implemented | Multi-metric session summaries (JSON and Markdown), and universal audit log export with strict CSV Formula Injection defense (CWE-1236) (`core/session_summary.py`, `storage/export.py`). |
 | **Claude Code Interceptor Hooks** | ⚠️ Simulated / Contract Ready | Contract adapter implemented (`core/claude_code_adapter.py`) and verified against official Claude Code hook JSON fixtures. Live interception is **deliberately deferred** awaiting Claude Code installation on this host. |
-| **Host-Level OS Account & ACL Isolation** | ⚠️ Deliberately Deferred | `CheckpointSvc` Windows service account, NTFS ACL isolation, and DPAPI service-profile encryption are deferred to the final Security Integration phase. |
+| **Host-Level OS Account & ACL Isolation** | 🟡 Audited & Ready for Elevation | `CheckpointSvc` account creation, NTFS ACL setup, DPAPI key management, fail-closed production storage paths (`core/storage_paths.py`), and cross-account verification script (`scripts/verify_security_cross.ps1`) implemented and verified. Awaiting Administrator execution of `setup_security.ps1`. |
 
 ---
 
@@ -72,7 +72,73 @@ Status definitions:
 - [x] **Milestone 3: Intelligent Runtime Safety & Anomaly Detection** (Feature 12) — **COMPLETED & TESTED**
 - [x] **Milestone 4: Operational Dashboard, Provenance, Feedback & Export** (Features 14, 15, 16) — **COMPLETED & TESTED**
 - [x] **Post-Audit Tasks A–E** (Dashboard Auth, Provenance Architecture, Approval Expiry Daemon, Live SSE Notifications, Classifier hardening) — **COMPLETED & TESTED**
-- [ ] **Milestone 5: Host-Level Security Integration & Live Agent Verification** (Phase 0 / Phase 1 OS boundaries and Claude Code installation)
+- [ ] **Milestone 5: Host-Level Security Integration & Live Agent Verification**
+  - [x] **Stage 5A Pre-Elevation Infrastructure & Pre-Execution Audit** — **COMPLETED & TESTED**
+    - [x] Storage path manager (`core/storage_paths.py`): Fail-closed production mode; development mode fallback via `CHECKPOINT_DEV_MODE=1`; blocks forced workspace fallback in production.
+    - [x] Non-fallback audit across modules: `storage/db.py`, `core/suggestions.py`, and `core/auth.py` audited and hardened against silent workspace fallbacks.
+    - [x] Windows security management (`core/windows_security.py`): Non-elevated inspection, elevation check, account management via PowerShell `SecureString`.
+    - [x] Windows DPAPI wrapper (`core/dpapi.py`): ctypes `CryptProtectData` / `CryptUnprotectData` wrapper with CurrentUser scope and explicit dev-mode stub.
+    - [x] Setup, teardown & verification scripts (`scripts/setup_security.ps1`, `scripts/teardown_security.ps1`, `scripts/verify_security.ps1`, `scripts/verify_security_cross.ps1`).
+    - [x] Unit test suites (`tests/test_storage_paths.py`, `tests/test_windows_security.py`, `tests/test_dpapi.py`): 38 tests passing.
+    - [x] Cross-account ACL integration test suite (`tests/test_acl_cross.py`): Skips cleanly when prerequisites are unavailable; no false passes.
+  - [ ] **Stage 5A Elevated Setup & Windows Security Boundary Execution** — **IN-PROGRESS (Awaiting Administrator Authorization)**
+    - [ ] Run elevated security configuration script (`scripts/setup_security.ps1`).
+    - [ ] Run cross-account security verification (`scripts/verify_security_cross.ps1`).
+    - [ ] Run post-setup integration tests (`tests/test_acl_cross.py`).
+  - [ ] **Stage 5B Live Claude Code Integration & Verification** — **PENDING**
+    - [ ] Check and install Claude Code CLI.
+    - [ ] Register live PreToolUse and PostToolUse hooks (`scripts/register_claude_hooks.ps1`).
+    - [ ] Verify live interception, allow/block decisions, updated inputs, and fail-closed behavior.
+
+> [!CAUTION]
+> **MANDATORY SECURITY GATE: CRITICAL Approvals Disabled**
+> High-risk and CRITICAL approvals MUST remain strictly disabled until the dedicated `CheckpointSvc` service account, NTFS ACL isolation, and independent background service execution are established and verified via `scripts/verify_security_cross.ps1`.
+
+---
+
+## What Needs to Be Done Next (Instructions & Runbook)
+
+Below are the remaining tasks, the files involved, and the commands required to complete them:
+
+### 1. Elevated Security Setup (Stage 5A)
+* **Goal:** Create the local `CheckpointSvc` service account, configure restrictive NTFS ACLs on `%LOCALAPPDATA%\Checkpoint\`, and write the `.security_configured` marker.
+* **Files involved:** `scripts/setup_security.ps1`, `core/storage_paths.py`, `core/windows_security.py`
+* **Command (run as Administrator in PowerShell):**
+  ```powershell
+  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+  .\scripts\setup_security.ps1
+  ```
+
+### 2. Verify Host-Level Security Boundaries
+* **Goal:** Verify that the current user/agent account is denied read/write to protected directories (`store/`, `db/`, `signing/`, `auth/`), has create-only permissions on `journal-drop/`, and read-only access to `git-backups/`.
+* **Files involved:** `scripts/verify_security_cross.ps1`, `tests/test_acl_cross.py`
+* **Commands (run from standard non-elevated terminal):**
+  ```powershell
+  # 1. Run PowerShell cross-account verification script
+  .\scripts\verify_security_cross.ps1
+
+  # 2. Run Python integration tests against the configured security boundary
+  $env:CHECKPOINT_INTEGRATION="1"
+  venv\Scripts\python -m pytest tests/test_acl_cross.py -v
+  ```
+
+### 3. Claude Code CLI Installation (Stage 5B)
+* **Goal:** Ensure Node.js 18+ and Claude Code CLI (`@anthropic-ai/claude-code`) are installed.
+* **Commands:**
+  ```powershell
+  node --version
+  npm install -g @anthropic-ai/claude-code
+  claude --version
+  ```
+
+### 4. Live Hook Registration & End-to-End Verification (Stage 5B)
+* **Goal:** Register `core/claude_code_adapter.py` hooks with Claude Code and verify live interception, approvals, and fail-closed enforcement.
+* **Files involved:** `scripts/register_claude_hooks.ps1`, `core/claude_code_adapter.py`, `tests/test_claude_code_adapter.py`
+* **Commands:**
+  ```powershell
+  .\scripts\register_claude_hooks.ps1
+  venv\Scripts\python -m pytest tests/test_claude_code_adapter.py -v
+  ```
 
 ---
 
@@ -87,6 +153,7 @@ checkpoint/
 │   ├── blob_store.py          # SHA-256 sharded compressed blob store (50 MB cap)
 │   ├── claude_code_adapter.py # Claude Code hook client contract & JSON serialization
 │   ├── confirmation.py        # Confirmation gate for interactive approval
+│   ├── dpapi.py               # Windows DPAPI CryptProtectData wrapper (CurrentUser scope)
 │   ├── event_types.py         # Shared Event, Decision, RiskTier, and state data contracts
 │   ├── expiry_daemon.py       # Background approval expiry worker (300s authoritative window)
 │   ├── file_ops.py            # Intercepted file operations
@@ -105,14 +172,22 @@ checkpoint/
 │   ├── risk_classifier.py     # Deterministic rules-first risk classification
 │   ├── sandbox.py             # Staged dry-run execution & diffing
 │   ├── session_summary.py     # Multi-metric session summaries & Markdown reports
+│   ├── storage_paths.py       # Protected %LOCALAPPDATA%\Checkpoint\ paths & fail-closed policy
 │   ├── suggestions.py         # Safer alternative command suggestions & trash
-│   └── version_control.py     # Snapshotting, staged restore, conflict detection, Option A quota
+│   ├── version_control.py     # Snapshotting, staged restore, conflict detection, Option A quota
+│   └── windows_security.py    # Service account management, ACLs, and elevation checks
 ├── dashboard/
 │   ├── app.py                 # Flask web dashboard with CSRF, auth, SSE /events, flags, summaries, exports
 │   └── templates/             # Dashboard HTML views (live SSE + browser notifications)
 ├── docs/
 │   ├── Checkpoint_Synopsis.docx
 │   └── threat_model.md        # Comprehensive 6-vector threat model
+├── scripts/
+│   ├── register_claude_hooks.ps1 # Register hooks with local Claude Code CLI
+│   ├── setup_security.ps1        # Elevated Administrator script to create account & set ACLs
+│   ├── teardown_security.ps1     # Cleanup script to revert account & ACLs
+│   ├── verify_security.ps1       # Same-process ACL & identity inspection
+│   └── verify_security_cross.ps1 # Cross-account effective ACL & boundary verification
 ├── storage/
 │   ├── checkpoint.db          # SQLite audit, actions, versions, and blob tracking database
 │   ├── db.py                  # Database access layer and schema management
@@ -121,6 +196,7 @@ checkpoint/
 │   └── trash/                 # Soft-delete recoverable trash directory
 ├── tests/
 │   ├── fixtures/claude_code/  # Official Claude Code hook JSON payloads for testing
+│   ├── test_acl_cross.py      # Integration tests for cross-account ACL enforcement
 │   ├── test_auth.py           # Tests for Argon2id auth, sessions, rate limiting, Host/Origin
 │   ├── test_blob_store.py     # Tests for content-addressed blob store
 │   ├── test_claude_code_adapter.py # Tests for hook adapter contracts
@@ -128,6 +204,7 @@ checkpoint/
 │   ├── test_dashboard.py      # Tests for web dashboard
 │   ├── test_db.py             # Tests for database operations
 │   ├── test_db_suggestions.py # Tests for suggestion persistence
+│   ├── test_dpapi.py          # Tests for Windows DPAPI encryption/decryption
 │   ├── test_expiry.py         # Tests for server-side approval expiry daemon
 │   ├── test_git_safety.py     # Tests for git safety net & external backup store
 │   ├── test_journal.py        # Tests for durable audit journal & hash chain
@@ -140,8 +217,10 @@ checkpoint/
 │   ├── test_provenance.py     # Tests for persistent provenance architecture
 │   ├── test_risk_classifier.py# Golden table risk classification tests
 │   ├── test_sandbox.py        # Tests for shadow-copying and diffs
+│   ├── test_storage_paths.py  # Tests for storage path resolution & fail-closed security mode
 │   ├── test_suggestions.py    # Tests for safer alternatives and trash
-│   └── test_version_control.py# Tests for file history, restore, and Option A quota
+│   ├── test_version_control.py# Tests for file history, restore, and Option A quota
+│   └── test_windows_security.py # Tests for Windows security operations and elevation guards
 ├── IMPLEMENTATION_LOG.md      # Detailed session log of changes
 ├── IMPLEMENTATION_STATUS.md   # Feature-by-feature verification status
 ├── KNOWN_LIMITATIONS.md       # Documented system limits and deferred items

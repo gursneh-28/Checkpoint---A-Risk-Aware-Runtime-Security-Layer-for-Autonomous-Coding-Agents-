@@ -35,7 +35,28 @@ import sqlite3
 from contextlib import contextmanager
 from typing import Any, Dict, Generator, List, Optional, Tuple
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "checkpoint.db")
+import os as _os
+from core.storage_paths import get_paths, SecurityConfigurationError
+
+# ---------------------------------------------------------------------------
+# Database path resolution
+# ---------------------------------------------------------------------------
+# In development mode (CHECKPOINT_DEV_MODE=1): workspace fallback allowed.
+# In production mode: SecurityConfigurationError propagates immediately.
+# No silent fallback ever occurs.
+
+if _os.getenv("CHECKPOINT_DEV_MODE") == "1":
+    # Dev mode: explicitly request workspace fallback if secure path unavailable.
+    try:
+        _paths = get_paths()
+    except SecurityConfigurationError:
+        _paths = get_paths(force_workspace=True)
+    DB_PATH = str(_paths.database_path)
+else:
+    # Production: get_paths() raises SecurityConfigurationError if marker missing.
+    DB_PATH = str(get_paths().database_path)
+del _os
+
 
 VALID_DECISIONS = ("approved", "rejected", "alternative")
 OUTPUT_MAX_BYTES = 1 * 1024 * 1024   # 1 MB

@@ -10,7 +10,12 @@ my_notes.txt
 /repos.py
 /repos.json
 /scripts.py
-/scripts/
+/scripts/*
+!/scripts/setup_security.ps1
+!/scripts/verify_security.ps1
+!/scripts/teardown_security.ps1
+!/scripts/verify_security_cross.ps1
+!/scripts/register_claude_hooks.ps1
 /tmp/
 /commands.py
 /clean_commands.py
