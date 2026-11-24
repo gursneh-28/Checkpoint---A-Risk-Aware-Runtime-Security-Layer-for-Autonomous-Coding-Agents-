@@ -2,46 +2,137 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Checkpoint — Rollback History</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkpoint &mdash; Version & Rollback History</title>
     <style>
-        body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; background: #f5f7fa; color: #1a1a1a; margin: 0; padding: 40px; }
-        h1 { color: #1F4E79; margin-bottom: 4px; }
-        .subtitle { color: #666; margin-bottom: 24px; font-size: 15px; }
-        .back-link { display: inline-block; margin-bottom: 20px; color: #1F4E79; text-decoration: none; font-size: 14px; }
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-        th { background: #1F4E79; color: white; text-align: left; padding: 12px 16px; font-size: 14px; }
-        td { padding: 12px 16px; border-bottom: 1px solid #eee; font-size: 14px; }
+        :root {
+            --bg-body: #070a12;
+            --bg-card: #111827;
+            --bg-nav: #0d1322;
+            --bg-subtle: #1a2438;
+            --border: #1e293b;
+            --border-hover: #334155;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --primary: #38bdf8;
+            --risk-low: #10b981;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 40px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 24px;
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 13.5px;
+            font-weight: 500;
+            transition: color 0.15s;
+        }
+        .back-link:hover { color: #fff; }
+
+        h1 { font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+        .subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 28px; }
+
+        .data-table-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+        th {
+            background: var(--bg-nav);
+            color: var(--text-muted);
+            padding: 12px 16px;
+            font-size: 11.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            border-bottom: 1px solid var(--border);
+        }
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            vertical-align: middle;
+        }
         tr:last-child td { border-bottom: none; }
-        .file-cell { font-family: "Consolas", monospace; font-size: 13px; }
-        .timestamp-cell { color: #888; font-size: 13px; white-space: nowrap; }
-        .restore-btn { display: inline-block; padding: 6px 16px; border-radius: 6px; font-size: 12.5px; font-weight: 600; text-decoration: none; background: #1F4E79; color: white; border: none; cursor: pointer; font-family: inherit; }
-        .empty-state { background: white; padding: 40px; border-radius: 10px; text-align: center; color: #888; }
+        tr:hover td { background: var(--bg-subtle); }
+
+        .file-cell { font-family: "JetBrains Mono", Consolas, monospace; font-size: 12px; color: #fff; }
+        .timestamp-cell { color: var(--text-dim); font-size: 12px; font-family: monospace; white-space: nowrap; }
+
+        .restore-btn {
+            background: #059669;
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .restore-btn:hover { background: #10b981; }
+
+        .empty-state {
+            padding: 48px;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
-    <a class="back-link" href="{{ url_for('dashboard') }}">&larr; Back to Activity</a>
-    <h1>Rollback History</h1>
-    <div class="subtitle">Every saved checkpoint — restore a file to how it looked before a risky action changed it.</div>
+    <a class="back-link" href="{{ url_for('dashboard') }}">&larr; Back to Security Dashboard</a>
+    <h1>Rollback & Snapshot History</h1>
+    <div class="subtitle">Every saved workspace checkpoint &mdash; restore any target file to how it existed before a risky operation.</div>
 
-    {% if checkpoints %}
-    <table>
-        <tr><th>Saved At</th><th>File</th><th>Why it was saved</th><th>Restore</th></tr>
-        {% for c in checkpoints %}
-        <tr>
-            <td class="timestamp-cell">{{ c.timestamp.split("T")[1].split(".")[0] }}</td>
-            <td class="file-cell">{{ c.file_path }}</td>
-            <td>{{ c.description }}</td>
-            <td>
-                <form method="post" action="{{ url_for('rollback', checkpoint_id=c.id) }}" style="display:inline">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="restore-btn">Restore this version</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
-    {% else %}
-    <div class="empty-state">No checkpoints saved yet — a checkpoint is created automatically whenever a risky write, delete, or move happens.</div>
-    {% endif %}
+    <div class="data-table-card">
+        {% if checkpoints %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Saved At</th>
+                    <th>Target File Path</th>
+                    <th>Snapshot Location</th>
+                    <th>Why Saved (Trigger)</th>
+                    <th>Restore Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in checkpoints %}
+                <tr>
+                    <td class="timestamp-cell">{{ c.timestamp.split("T")[1].split(".")[0] if 'T' in c.timestamp else c.timestamp }}</td>
+                    <td class="file-cell">{{ c.file_path }}</td>
+                    <td style="font-family: monospace; font-size: 11px; color: var(--text-dim);">{{ c.snapshot_path }}</td>
+                    <td style="color: var(--text-muted);">{{ c.description }}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('rollback', checkpoint_id=c.id) }}" style="display:inline" onsubmit="return confirm('Restore target file to this checkpoint?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="restore-btn">Restore this version</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            No checkpoints saved yet &mdash; checkpoints are generated automatically before risky write, delete, or overwrite actions.
+        </div>
+        {% endif %}
+    </div>
 </body>
 </html>

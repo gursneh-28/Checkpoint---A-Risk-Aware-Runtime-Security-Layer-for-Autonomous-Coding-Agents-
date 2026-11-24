@@ -237,3 +237,47 @@ All unit and integration tests run within isolated temporary test fixtures (`tmp
 ```bash
 venv\Scripts\python.exe -m pytest tests/ -v
 ```
+
+---
+
+## Antigravity Integration
+
+Checkpoint integrates directly into the Google Antigravity agent lifecycle to intercept and evaluate terminal commands before execution.
+
+### 1. Hook Configuration
+- **File:** [`.agents/hooks.json`](file:///d:/Major%20Project/Checkpoint---A-Risk-Aware-Runtime-Security-Layer-for-Autonomous-Coding-Agents-/.agents/hooks.json)
+- **Lifecycle Event:** `PreToolUse`
+- **Matcher:** `"run_command"`
+- **Command:** `if exist checkpoint_hook.cmd (call checkpoint_hook.cmd) else (call .agents\checkpoint_hook.cmd)`
+- **Timeout:** 330 seconds
+
+### 2. How the Connection Works
+1. Before Antigravity executes any `run_command` tool call, the `PreToolUse` hook intercepts it.
+2. Antigravity streams the tool invocation payload (JSON via standard input) to the launcher script.
+3. The launcher script invokes the Python adapter inside the project virtual environment with `CHECKPOINT_DEV_MODE=1`.
+4. The adapter extracts the command line, working directory, and conversation metadata, and feeds them into Checkpoint's core evaluation pipeline (`evaluate()`).
+5. **Decisions:**
+   - **LOW Risk / Fast-Path:** Returns `{"decision": "allow", "reason": "..."}`, allowing Antigravity to run the tool.
+   - **MEDIUM / HIGH / CRITICAL Risk:** Halts execution and polls for human dashboard confirmation. If unapproved or timed out (300s), returns `{"decision": "deny", "reason": "..."}`, blocking execution.
+   - **Safer Alternatives:** Returns `{"decision": "allow", "overwrite": {"CommandLine": "..."}}` so Antigravity executes the rewritten safe command.
+   - **Hard Deny / Malformed / Unsupported Tools:** Fails closed and returns `{"decision": "deny", "reason": "..."}`.
+
+### 3. Files Used
+- **Launcher:** [`.agents/checkpoint_hook.cmd`](file:///d:/Major%20Project/Checkpoint---A-Risk-Aware-Runtime-Security-Layer-for-Autonomous-Coding-Agents-/.agents/checkpoint_hook.cmd) — Windows batch runner handling directory resolution, spaces in paths, virtualenv selection, and environment setup.
+- **Forwarder:** [`.agents/.agents/checkpoint_hook.cmd`](file:///d:/Major%20Project/Checkpoint---A-Risk-Aware-Runtime-Security-Layer-for-Autonomous-Coding-Agents-/.agents/.agents/checkpoint_hook.cmd) — Delegation shim ensuring in-flight relative paths resolve correctly regardless of process working directory.
+- **Adapter:** [`core/antigravity_adapter.py`](file:///d:/Major%20Project/Checkpoint---A-Risk-Aware-Runtime-Security-Layer-for-Autonomous-Coding-Agents-/core/antigravity_adapter.py) — Bridges Antigravity JSON protocol with Checkpoint `Event` and `Decision` contracts.
+- **Hook Config:** [`.agents/hooks.json`](file:///d:/Major%20Project/Checkpoint---A-Risk-Aware-Runtime-Security-Layer-for-Autonomous-Coding-Agents-/.agents/hooks.json) — Antigravity hook declaration.
+- **Tests:** [`tests/test_antigravity_adapter.py`](file:///d:/Major%20Project/Checkpoint---A-Risk-Aware-Runtime-Security-Layer-for-Autonomous-Coding-Agents-/tests/test_antigravity_adapter.py) — Unit tests for payload parsing, decision translation, and fail-closed handling.
+
+### 4. How to Verify the Connection
+- **Verify Safe Command (Fast-Path Allowed):**
+  Run any benign allowlisted command (e.g. `echo "hello"`, `whoami`, `git status`). The hook evaluates it as `LOW`, returns `allow`, and the command succeeds.
+- **Verify Medium/High Action Pauses for Approval:**
+  Run a medium-risk command (e.g. `rm <file>`). Checkpoint halts execution and polls for confirmation via the dashboard or decision API before proceeding or timing out.
+- **Verify Enforcement / Block (Hard Deny):**
+  Attempt to execute any command targeting Checkpoint's own database or enforcement scripts (e.g., modifying `storage/db/checkpoint.db`). The hook intercepts the call and blocks execution with:
+  ```
+  tool call denied by pre-tool hook: HARD DENY: Action targets Checkpoint's own enforcement or storage
+  ```
+- **Security Boundary Disclosure:**
+  In development mode (`CHECKPOINT_DEV_MODE=1`), storage falls back to workspace storage with no OS-level ACL isolation. High-risk and CRITICAL approvals remain strictly disabled until the dedicated `CheckpointSvc` service account and NTFS ACL isolation are deployed and verified.

@@ -2,106 +2,1860 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Checkpoint — Activity Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkpoint &mdash; Autonomous Agent Security Operations Center</title>
     <style>
-        body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; background: #f5f7fa; color: #1a1a1a; margin: 0; padding: 40px; }
-        h1 { color: #1F4E79; margin-bottom: 4px; }
-        .subtitle { color: #666; margin-bottom: 20px; font-size: 15px; }
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 13.5px; }
-        .refresh-note { color: #888; }
-        .live-pill { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #2E7D32; font-size: 13px; }
-        .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #2E7D32; animation: pulse 1.8s infinite; }
-        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
-        .notify-btn { background: #1F4E79; color: white; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
-        .notify-btn:hover { background: #153754; }
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-        th { background: #1F4E79; color: white; text-align: left; padding: 12px 16px; font-size: 14px; }
-        td { padding: 12px 16px; border-bottom: 1px solid #eee; font-size: 14px; vertical-align: top; }
+        :root {
+            --bg-body: #070a12;
+            --bg-nav: #0d1322;
+            --bg-card: #111827;
+            --bg-card-hover: #162032;
+            --bg-subtle: #1a2438;
+            --border: #1e293b;
+            --border-hover: #334155;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --primary: #38bdf8;
+            --primary-glow: rgba(56, 189, 248, 0.15);
+            --blue-accent: #2563eb;
+            --risk-low: #10b981;
+            --risk-low-bg: rgba(16, 185, 129, 0.12);
+            --risk-med: #f59e0b;
+            --risk-med-bg: rgba(245, 158, 11, 0.12);
+            --risk-high: #f97316;
+            --risk-high-bg: rgba(249, 115, 22, 0.14);
+            --risk-crit: #ef4444;
+            --risk-crit-bg: rgba(239, 68, 68, 0.18);
+            --status-executed: #10b981;
+            --status-blocked: #ef4444;
+            --status-rejected: #ef4444;
+            --status-pending: #f59e0b;
+            --status-stale: #64748b;
+            --code-bg: #090e17;
+            --code-text: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Top Navigation Bar */
+        .top-navbar {
+            background: var(--bg-nav);
+            border-bottom: 1px solid var(--border);
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .brand-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .brand-logo {
+            width: 32px;
+            height: 32px;
+            fill: none;
+            stroke: var(--primary);
+            stroke-width: 2;
+            filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.4));
+        }
+        .brand-title {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .brand-version {
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--primary);
+            padding: 2px 7px;
+            border-radius: 4px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            text-transform: uppercase;
+        }
+
+        /* System Security Status Banner */
+        .system-status-banner {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #fbbf24;
+            padding: 5px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-pulse {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #fbbf24;
+            box-shadow: 0 0 8px #fbbf24;
+        }
+
+        .top-controls {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .live-stream-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--risk-low);
+            background: var(--risk-low-bg);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            padding: 5px 12px;
+            border-radius: 20px;
+        }
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--risk-low);
+            animation: pulse-green 1.8s infinite;
+        }
+        @keyframes pulse-green {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .notify-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+        }
+        .notify-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-left: 1px solid var(--border);
+            padding-left: 14px;
+        }
+        .user-tag {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .user-tag span {
+            color: #fff;
+            font-weight: 600;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 11.5px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-outline:hover {
+            border-color: var(--risk-crit);
+            color: var(--risk-crit);
+        }
+
+        /* App Layout (Sidebar + Main Workspace) */
+        .app-container {
+            display: flex;
+            flex: 1;
+            min-height: calc(100vh - 60px);
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 240px;
+            background: var(--bg-nav);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            flex-shrink: 0;
+            padding: 16px 0;
+        }
+        .nav-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 0 10px;
+        }
+        .nav-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            padding: 12px 14px 6px;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 14px;
+            border-radius: 6px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+        }
+        .nav-item:hover {
+            color: #fff;
+            background: var(--bg-card);
+        }
+        .nav-item.active {
+            color: var(--primary);
+            background: var(--bg-card);
+            font-weight: 600;
+            box-shadow: inset 3px 0 0 var(--primary);
+        }
+        .nav-icon {
+            width: 17px;
+            height: 17px;
+            stroke-width: 2;
+            stroke: currentColor;
+            fill: none;
+            flex-shrink: 0;
+        }
+        .nav-badge {
+            margin-left: auto;
+            background: var(--risk-med);
+            color: #000;
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 10px;
+        }
+
+        .sidebar-footer {
+            padding: 14px;
+            border-top: 1px solid var(--border);
+            font-size: 11.5px;
+            color: var(--text-dim);
+        }
+        .sidebar-footer .status-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+        .status-dot-green {
+            color: var(--risk-low);
+            font-weight: 600;
+        }
+
+        /* Main Workspace Panels */
+        .main-workspace {
+            flex: 1;
+            padding: 28px 32px;
+            overflow-y: auto;
+            background: var(--bg-body);
+        }
+
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.15s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Page Headers */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+        .page-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .page-subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* KPI Metric Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.15s;
+        }
+        .kpi-card:hover {
+            border-color: var(--border-hover);
+        }
+        .kpi-card::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+        }
+        .kpi-card.card-total::after { background: var(--primary); }
+        .kpi-card.card-allowed::after { background: var(--risk-low); }
+        .kpi-card.card-blocked::after { background: var(--risk-crit); }
+        .kpi-card.card-pending::after { background: var(--risk-med); }
+
+        .kpi-label {
+            font-size: 11.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        .kpi-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 6px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .kpi-desc {
+            font-size: 12px;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Overview Charts & Posture Grid */
+        .overview-split {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .panel-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .panel-card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Segmented Risk Distribution Bar */
+        .risk-bar-container {
+            margin-bottom: 16px;
+        }
+        .risk-segmented-bar {
+            height: 16px;
+            border-radius: 8px;
+            background: var(--bg-subtle);
+            display: flex;
+            overflow: hidden;
+            margin-bottom: 14px;
+            border: 1px solid var(--border);
+        }
+        .risk-segment {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        .segment-low { background: var(--risk-low); }
+        .segment-med { background: var(--risk-med); }
+        .segment-high { background: var(--risk-high); }
+        .segment-crit { background: var(--risk-crit); }
+
+        .risk-legend {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        .legend-item {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+        }
+        .legend-name {
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .legend-count {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .legend-pct {
+            font-size: 10.5px;
+            color: var(--text-dim);
+        }
+
+        /* Security Boundary Disclosure Card */
+        .posture-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .posture-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 12.5px;
+        }
+        .posture-item:last-child { border-bottom: none; }
+        .posture-label { color: var(--text-muted); }
+        .posture-val { font-weight: 600; color: #fff; }
+
+        /* Tables & Lists */
+        .table-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .search-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #fff;
+            font-size: 13px;
+            width: 280px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .search-box:focus {
+            border-color: var(--primary);
+        }
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .filter-pill {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .filter-pill:hover, .filter-pill.active {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--bg-subtle);
+        }
+
+        .data-table-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+        th {
+            background: var(--bg-nav);
+            color: var(--text-muted);
+            padding: 12px 16px;
+            font-size: 11.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            border-bottom: 1px solid var(--border);
+        }
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            vertical-align: middle;
+            color: var(--text-main);
+        }
         tr:last-child td { border-bottom: none; }
-        tr:hover { background: #fafbfc; }
-        .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
-        .risk-LOW { background: #E7F6E7; color: #2E7D32; }
-        .risk-MEDIUM { background: #FFF6DC; color: #8a6d00; }
-        .risk-HIGH { background: #FBE4E4; color: #B00020; }
-        .risk-CRITICAL { background: #7A0010; color: white; }
-        .status-executed { background: #E7F6E7; color: #2E7D32; }
-        .status-blocked { background: #FBE4E4; color: #B00020; }
-        .status-rejected { background: #FBE4E4; color: #B00020; }
-        .status-pending { background: #FFF0DA; color: #B5651D; }
-        .status-approved { background: #E7F6E7; color: #2E7D32; }
-        .status-stale { background: #F0F0F0; color: #777; }
-        .status-alternative, .status-executed-alternative { background: #E3EEF9; color: #1F4E79; }
-        .action-buttons a, .action-buttons button { display: inline-block; padding: 5px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 600; text-decoration: none; margin-right: 6px; border: none; cursor: pointer; font-family: inherit; }
-        .btn-approve { background: #2E7D32; color: white; }
-        .btn-reject { background: #B00020; color: white; }
-        .btn-alt { background: #1F4E79; color: white; }
-        .suggestion-box { margin-top: 8px; padding: 8px 12px; background: #E3EEF9; border-left: 4px solid #1F4E79; border-radius: 4px; font-family: -apple-system, "Segoe UI", Arial, sans-serif; font-size: 13px; color: #1F4E79; }
-        .command-cell { font-family: "Consolas", monospace; font-size: 12.5px; color: #444; max-width: 420px; overflow-wrap: break-word; white-space: pre-wrap; }
-        .timestamp-cell { color: #888; font-size: 13px; white-space: nowrap; }
-        .empty-state { background: white; padding: 40px; border-radius: 10px; text-align: center; color: #888; }
+        tr:hover td {
+            background: var(--bg-card-hover);
+        }
+
+        /* Risk Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 9px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+        .risk-LOW {
+            background: var(--risk-low-bg);
+            color: var(--risk-low);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .risk-MEDIUM {
+            background: var(--risk-med-bg);
+            color: var(--risk-med);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        .risk-HIGH {
+            background: var(--risk-high-bg);
+            color: var(--risk-high);
+            border: 1px solid rgba(249, 115, 22, 0.3);
+        }
+        .risk-CRITICAL {
+            background: var(--risk-crit-bg);
+            color: var(--risk-crit);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
+        }
+
+        /* Status Badges */
+        .status-executed, .status-approved {
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        .status-blocked, .status-rejected {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        .status-pending {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border {
+            0% { border-color: rgba(245, 158, 11, 0.3); }
+            50% { border-color: rgba(245, 158, 11, 0.8); }
+            100% { border-color: rgba(245, 158, 11, 0.3); }
+        }
+        .status-stale {
+            background: rgba(100, 116, 139, 0.1);
+            color: #94a3b8;
+            border: 1px solid rgba(100, 116, 139, 0.2);
+        }
+        .status-alternative, .status-executed-alternative {
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--primary);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        /* Code Cells */
+        .command-code {
+            font-family: "JetBrains Mono", Consolas, Menlo, monospace;
+            font-size: 12px;
+            color: #cbd5e1;
+            background: var(--code-bg);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            max-width: 440px;
+            overflow-x: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+        }
+        .timestamp-text {
+            color: var(--text-dim);
+            font-size: 12px;
+            white-space: nowrap;
+            font-family: monospace;
+        }
+
+        /* Action Buttons */
+        .btn-action-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-sm {
+            padding: 5px 11px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: inherit;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-approve {
+            background: #059669;
+            color: #fff;
+        }
+        .btn-approve:hover { background: #10b981; }
+        .btn-reject {
+            background: #dc2626;
+            color: #fff;
+        }
+        .btn-reject:hover { background: #ef4444; }
+        .btn-alt {
+            background: #0284c7;
+            color: #fff;
+        }
+        .btn-alt:hover { background: #0ea5e9; }
+        .btn-secondary {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+        .btn-secondary:hover {
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        /* Pull-Request-Inspired Review View */
+        .pr-container {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+        }
+        .pr-list {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            max-height: 720px;
+            overflow-y: auto;
+        }
+        .pr-list-header {
+            padding: 14px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+        }
+        .pr-item {
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .pr-item:hover, .pr-item.selected {
+            background: var(--bg-subtle);
+        }
+        .pr-item-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .pr-item-id {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .pr-item-cmd {
+            font-family: monospace;
+            font-size: 11.5px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pr-detail-pane {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+        }
+        .pr-banner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+        .pr-title-group h3 {
+            font-size: 18px;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .diff-container {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 16px;
+            font-family: "JetBrains Mono", Consolas, monospace;
+            font-size: 12.5px;
+            color: var(--code-text);
+            margin-bottom: 20px;
+            overflow-x: auto;
+            line-height: 1.6;
+        }
+        .diff-added {
+            color: #34d399;
+            background: rgba(16, 185, 129, 0.1);
+            display: block;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        .diff-removed {
+            color: #f87171;
+            background: rgba(239, 68, 68, 0.1);
+            display: block;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        /* Blast Radius Cards */
+        .blast-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .blast-item {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+        }
+        .blast-label {
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .blast-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+            word-break: break-all;
+        }
+
+        /* Typed Confirmation Input */
+        .typed-confirm-box {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            padding: 14px;
+            margin-bottom: 18px;
+        }
+        .typed-confirm-box p {
+            font-size: 12.5px;
+            color: #fca5a5;
+            margin-bottom: 10px;
+        }
+        .typed-input {
+            background: var(--bg-body);
+            border: 1px solid var(--risk-crit);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: monospace;
+            width: 220px;
+            outline: none;
+        }
+
+        /* Suggestion Box */
+        .suggestion-box {
+            margin-top: 6px;
+            padding: 6px 10px;
+            background: rgba(56, 189, 248, 0.08);
+            border-left: 3px solid var(--primary);
+            border-radius: 3px;
+            font-size: 12px;
+            color: var(--primary);
+        }
+
+        /* Modal Dialogs */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-hover);
+            border-radius: 10px;
+            width: 520px;
+            max-width: 90vw;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            overflow: hidden;
+            animation: modalPop 0.15s ease;
+        }
+        @keyframes modalPop {
+            from { transform: scale(0.96); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal-header {
+            padding: 16px 20px;
+            background: var(--bg-nav);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h4 {
+            font-size: 15px;
+            color: #fff;
+        }
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 18px;
+            cursor: pointer;
+        }
+        .modal-body {
+            padding: 20px;
+        }
+        .modal-field {
+            margin-bottom: 14px;
+        }
+        .modal-field label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        .modal-field input, .modal-field select, .modal-field textarea {
+            width: 100%;
+            background: var(--bg-subtle);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+            font-family: inherit;
+        }
+        .modal-field textarea { height: 75px; resize: vertical; }
+        .modal-footer {
+            padding: 14px 20px;
+            background: var(--bg-nav);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .empty-state {
+            padding: 48px;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 14px;
+        }
+        .empty-state-icon {
+            width: 48px;
+            height: 48px;
+            stroke: var(--text-dim);
+            margin-bottom: 12px;
+        }
     </style>
 </head>
 <body>
-    <h1>Checkpoint — Activity Dashboard</h1>
-    <div class="subtitle">Every action a coding agent has attempted, and what Checkpoint decided to do about it.</div>
-    
-    <div class="top-bar">
-        <div class="refresh-note">
-            <span class="live-pill"><span class="live-dot"></span> Live Stream Active</span>
-            &nbsp;|&nbsp; <a href="{{ url_for('checkpoints') }}" style="color:#1F4E79;">View Rollback History &rarr;</a>
+
+    <!-- Top Navigation Bar -->
+    <header class="top-navbar">
+        <div class="brand-section">
+            <svg class="brand-logo" viewBox="0 0 24 24">
+                <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z"></path>
+                <path d="M12 7v10"></path>
+                <path d="M8 12l4 4 4-4"></path>
+            </svg>
+            <div class="brand-title">
+                CHECKPOINT
+                <span class="brand-version">SOC v2.4</span>
+            </div>
         </div>
-        <div id="notify-container">
-            <button id="notify-perm-btn" class="notify-btn" onclick="requestNotificationPermission()">🔔 Enable Browser Notifications</button>
+
+        <!-- Security Posture Disclosure Banner -->
+        <div class="system-status-banner" title="OS-level ACL boundary not active. Operating with development workspace storage.">
+            <span class="status-pulse"></span>
+            <span>DEVELOPMENT MODE &bull; Workspace Storage &bull; OS ACL Isolation Inactive</span>
+        </div>
+
+        <div class="top-controls">
+            <div class="live-stream-badge">
+                <span class="live-dot"></span>
+                <span>LIVE SSE STREAM</span>
+            </div>
+
+            <div id="notify-container">
+                <button id="notify-perm-btn" class="notify-btn" onclick="requestNotificationPermission()">
+                    🔔 Enable Alerts
+                </button>
+            </div>
+
+            <div class="user-menu">
+                <div class="user-tag">Admin: <span>{{ session.get('username', 'admin') }}</span></div>
+                <form method="POST" action="{{ url_for('rotate_key_view') }}" style="display:inline;" onsubmit="return confirm('Rotate signing key? This invalidates current sessions.');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-outline">Rotate Key</button>
+                </form>
+                <form method="POST" action="{{ url_for('logout_view') }}" style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-outline">Sign Out</button>
+                </form>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <nav class="nav-group">
+                <div class="nav-label">Security Operations</div>
+                <a class="nav-item active" onclick="switchTab('overview')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    Overview
+                </a>
+                <a class="nav-item" onclick="switchTab('live')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                    Live Monitoring
+                </a>
+                <a class="nav-item" onclick="switchTab('approvals')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    Approvals Queue
+                    {% if stats.pending_count > 0 %}
+                    <span class="nav-badge" id="nav-pending-badge">{{ stats.pending_count }}</span>
+                    {% endif %}
+                </a>
+                <a class="nav-item" onclick="switchTab('pr-review')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"></circle><circle cx="6" cy="6" r="3"></circle><path d="M13 6h3a2 2 0 0 1 2 2v7"></path><line x1="6" y1="9" x2="6" y2="21"></line></svg>
+                    PR-Style Review
+                </a>
+
+                <div class="nav-label">Audit & Forensic</div>
+                <a class="nav-item" onclick="switchTab('versions')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                    Version History
+                </a>
+                <a class="nav-item" onclick="switchTab('provenance')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                    Provenance & Origin
+                </a>
+                <a class="nav-item" onclick="switchTab('wrong-rating')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    Wrong-Rating Queue
+                </a>
+                <a class="nav-item" onclick="switchTab('history')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    Activity Summary
+                </a>
+                <a class="nav-item" onclick="switchTab('settings')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    Settings & Security
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="status-row">
+                    <span>Interceptor Hook:</span>
+                    <span class="status-dot-green">Active (.agents)</span>
+                </div>
+                <div class="status-row">
+                    <span>Policy Engine:</span>
+                    <span>Fail-Closed</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-workspace">
+
+            <!-- TAB 1: OVERVIEW -->
+            <section id="tab-overview" class="tab-content active">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Executive SOC Overview</h1>
+                        <p class="page-subtitle">Real-time threat interception and risk enforcement for autonomous agent sessions.</p>
+                    </div>
+                </div>
+
+                <!-- KPI Metric Cards -->
+                <div class="kpi-grid">
+                    <div class="kpi-card card-total">
+                        <div class="kpi-label">Total Actions Intercepted</div>
+                        <div class="kpi-value" id="kpi-total">{{ stats.total }}</div>
+                        <div class="kpi-desc">Synchronously evaluated commands</div>
+                    </div>
+                    <div class="kpi-card card-allowed">
+                        <div class="kpi-label">Allowed & Executed</div>
+                        <div class="kpi-value" id="kpi-allowed">{{ stats.by_status.get('executed', 0) + stats.by_status.get('approved', 0) }}</div>
+                        <div class="kpi-desc">Fast-path or approved actions</div>
+                    </div>
+                    <div class="kpi-card card-blocked">
+                        <div class="kpi-label">Blocked / Denied</div>
+                        <div class="kpi-value" id="kpi-blocked">{{ stats.by_status.get('blocked', 0) + stats.by_status.get('rejected', 0) }}</div>
+                        <div class="kpi-desc">Hard-deny or user rejected</div>
+                    </div>
+                    <div class="kpi-card card-pending">
+                        <div class="kpi-label">Awaiting Human Approval</div>
+                        <div class="kpi-value" id="kpi-pending">{{ stats.pending_count }}</div>
+                        <div class="kpi-desc">Paused pending decision</div>
+                    </div>
+                </div>
+
+                <!-- Risk Distribution & Security Boundary Posture -->
+                <div class="overview-split">
+                    <div class="panel-card">
+                        <div class="panel-card-title">
+                            <span>Risk Classification Distribution</span>
+                            <span style="font-size: 11.5px; color: var(--text-dim);">By Effective Tier</span>
+                        </div>
+
+                        {% set total_act = stats.total if stats.total > 0 else 1 %}
+                        {% set low_cnt = stats.tier_breakdown.get('LOW', 0) %}
+                        {% set med_cnt = stats.tier_breakdown.get('MEDIUM', 0) %}
+                        {% set high_cnt = stats.tier_breakdown.get('HIGH', 0) %}
+                        {% set crit_cnt = stats.tier_breakdown.get('CRITICAL', 0) %}
+
+                        <div class="risk-bar-container">
+                            <div class="risk-segmented-bar">
+                                <div class="risk-segment segment-low" style="width: {{ (low_cnt / total_act * 100)|round(1) }}%;"></div>
+                                <div class="risk-segment segment-med" style="width: {{ (med_cnt / total_act * 100)|round(1) }}%;"></div>
+                                <div class="risk-segment segment-high" style="width: {{ (high_cnt / total_act * 100)|round(1) }}%;"></div>
+                                <div class="risk-segment segment-crit" style="width: {{ (crit_cnt / total_act * 100)|round(1) }}%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="risk-legend">
+                            <div class="legend-item">
+                                <div class="legend-name" style="color: var(--risk-low);">LOW RISK</div>
+                                <div class="legend-count">{{ low_cnt }}</div>
+                                <div class="legend-pct">{{ (low_cnt / total_act * 100)|round(0) }}%</div>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-name" style="color: var(--risk-med);">MEDIUM</div>
+                                <div class="legend-count">{{ med_cnt }}</div>
+                                <div class="legend-pct">{{ (med_cnt / total_act * 100)|round(0) }}%</div>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-name" style="color: var(--risk-high);">HIGH RISK</div>
+                                <div class="legend-count">{{ high_cnt }}</div>
+                                <div class="legend-pct">{{ (high_cnt / total_act * 100)|round(0) }}%</div>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-name" style="color: var(--risk-crit);">CRITICAL</div>
+                                <div class="legend-count">{{ crit_cnt }}</div>
+                                <div class="legend-pct">{{ (crit_cnt / total_act * 100)|round(0) }}%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-card">
+                        <div class="panel-card-title">
+                            <span>Runtime Security Posture</span>
+                            <span class="brand-version">DEV BOUNDARY</span>
+                        </div>
+                        <div class="posture-list">
+                            <div class="posture-item">
+                                <span class="posture-label">Storage Backend:</span>
+                                <span class="posture-val">SQLite WAL (Workspace Fallback)</span>
+                            </div>
+                            <div class="posture-item">
+                                <span class="posture-label">OS-Level Isolation:</span>
+                                <span class="posture-val" style="color: #fbbf24;">Disabled (Single User)</span>
+                            </div>
+                            <div class="posture-item">
+                                <span class="posture-label">Milestone 5 Service:</span>
+                                <span class="posture-val" style="color: var(--text-dim);">CheckpointSvc (Pending Setup)</span>
+                            </div>
+                            <div class="posture-item">
+                                <span class="posture-label">CRITICAL Approval:</span>
+                                <span class="posture-val" style="color: #fbbf24;">Typed YES (Dev Mode Only)</span>
+                            </div>
+                            <div class="posture-item">
+                                <span class="posture-label">Audit Log Hash Chain:</span>
+                                <span class="posture-val" style="color: var(--risk-low);">SHA-256 Global Seq Active</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Events Table Preview -->
+                <div class="panel-card">
+                    <div class="panel-card-title">
+                        <span>Recent Security Interceptions</span>
+                        <a onclick="switchTab('live')" style="color: var(--primary); font-size: 12px; cursor: pointer;">View All in Live Stream &rarr;</a>
+                    </div>
+                    <div class="data-table-card">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Command</th>
+                                    <th>Risk Tier</th>
+                                    <th>Resolution</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for a in actions[:6] %}
+                                <tr>
+                                    <td class="timestamp-text">{{ a.timestamp.split("T")[1].split(".")[0] if 'T' in a.timestamp else a.timestamp }}</td>
+                                    <td><code class="command-code">{{ a.command }}</code></td>
+                                    <td><span class="badge risk-{{ a.effective_tier or a.risk_tier }}">{{ a.effective_tier or a.risk_tier }}</span></td>
+                                    <td><span class="badge status-{{ a.status }}">{{ a.status }}</span></td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="4" class="empty-state">No events recorded yet.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: LIVE MONITORING -->
+            <section id="tab-live" class="tab-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Live Security Command Feed</h1>
+                        <p class="page-subtitle">Real-time SSE monitoring stream. Agent actions appear synchronously as evaluated.</p>
+                    </div>
+                </div>
+
+                <div class="table-controls">
+                    <input type="text" id="live-search" class="search-box" placeholder="Search commands, tools, or hashes..." onkeyup="filterLiveTable()">
+                    <div class="filter-group">
+                        <button class="filter-pill active" onclick="setLiveFilter('ALL', this)">All</button>
+                        <button class="filter-pill" onclick="setLiveFilter('LOW', this)">Low</button>
+                        <button class="filter-pill" onclick="setLiveFilter('MEDIUM', this)">Medium</button>
+                        <button class="filter-pill" onclick="setLiveFilter('HIGH', this)">High</button>
+                        <button class="filter-pill" onclick="setLiveFilter('CRITICAL', this)">Critical</button>
+                        <button class="filter-pill" onclick="setLiveFilter('pending', this)">Pending</button>
+                    </div>
+                </div>
+
+                <div class="data-table-card">
+                    <table id="actions-table" {% if not actions %}style="display:none;"{% endif %}>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Type</th>
+                                <th>Command / Attempted Operation</th>
+                                <th>Risk Tier</th>
+                                <th>Status</th>
+                                <th>Decision & Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="actions-body">
+                            {% for a in actions %}
+                            <tr id="action-row-{{ a.id }}" data-tier="{{ a.effective_tier or a.risk_tier }}" data-status="{{ a.status }}">
+                                <td class="timestamp-text">{{ a.timestamp.split("T")[1].split(".")[0] if 'T' in a.timestamp else a.timestamp }}</td>
+                                <td style="color: var(--text-dim); font-size: 12px;">{{ a.action_type }}</td>
+                                <td>
+                                    <code class="command-code" title="{{ a.command }}">{{ a.command }}</code>
+                                    {% if a.status == "pending" and a.suggestion %}
+                                    <div class="suggestion-box">💡 <strong>Safer alternative:</strong> {{ a.suggestion }}</div>
+                                    {% endif %}
+                                </td>
+                                <td><span class="badge risk-{{ a.effective_tier or a.risk_tier }}">{{ a.effective_tier or a.risk_tier }}</span></td>
+                                <td><span class="badge status-{{ a.status }}" id="status-badge-{{ a.id }}">{{ a.status }}</span></td>
+                                <td class="action-buttons" id="action-buttons-{{ a.id }}">
+                                    {% if a.status == "pending" %}
+                                    <div class="btn-action-group">
+                                        {% if (a.effective_tier == 'CRITICAL' or a.risk_tier == 'CRITICAL') %}
+                                        <button class="btn-sm btn-approve" onclick="openApprovalModal({{ a.id }}, 'CRITICAL', '{{ a.command|replace("'", "\\'") }}')">Review CRITICAL</button>
+                                        {% else %}
+                                        <form method="post" action="{{ url_for('resolve', action_id=a.id, decision='approve') }}" style="display:inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-sm btn-approve">Approve</button>
+                                        </form>
+                                        {% endif %}
+
+                                        <form method="post" action="{{ url_for('resolve', action_id=a.id, decision='reject') }}" style="display:inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-sm btn-reject">Reject</button>
+                                        </form>
+
+                                        {% if a.suggestion %}
+                                        <form method="post" action="{{ url_for('resolve', action_id=a.id, decision='alternative') }}" style="display:inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-sm btn-alt">Do Instead</button>
+                                        </form>
+                                        {% endif %}
+
+                                        <button class="btn-sm btn-secondary" onclick="openFlagModal({{ a.id }}, '{{ a.effective_tier or a.risk_tier }}')">Flag</button>
+                                    </div>
+                                    {% else %}
+                                    <div class="btn-action-group">
+                                        <button class="btn-sm btn-secondary" onclick="inspectAction({{ a.id }})">Inspect</button>
+                                        <button class="btn-sm btn-secondary" onclick="openFlagModal({{ a.id }}, '{{ a.effective_tier or a.risk_tier }}')">Flag</button>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <div id="empty-state-view" class="empty-state" {% if actions %}style="display:none;"{% endif %}>
+                        <svg class="empty-state-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        <p>No agent actions intercepted yet. Run commands through Antigravity to see real-time security events.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: APPROVALS QUEUE -->
+            <section id="tab-approvals" class="tab-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Action Approval Queue</h1>
+                        <p class="page-subtitle">Elevated risk actions held in suspension until explicit operator consent.</p>
+                    </div>
+                </div>
+
+                {% set pending_actions = actions|selectattr('status', 'equalto', 'pending')|list %}
+                {% if pending_actions %}
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    {% for p in pending_actions %}
+                    <div class="panel-card" style="border-left: 4px solid {% if p.effective_tier == 'CRITICAL' %}var(--risk-crit){% elif p.effective_tier == 'HIGH' %}var(--risk-high){% else %}var(--risk-med){% endif %};">
+                        <div class="panel-card-title">
+                            <div style="display:flex; align-items:center; gap: 10px;">
+                                <span class="badge risk-{{ p.effective_tier or p.risk_tier }}">{{ p.effective_tier or p.risk_tier }}</span>
+                                <span style="font-size: 15px; font-weight: 700; color: #fff;">Action #{{ p.id }}</span>
+                                <span class="timestamp-text">{{ p.timestamp }}</span>
+                            </div>
+                            <span class="badge status-pending">Awaiting Decision</span>
+                        </div>
+
+                        <div style="margin-bottom: 14px;">
+                            <label style="font-size: 11.5px; color: var(--text-dim); text-transform: uppercase;">Command Attempted:</label>
+                            <pre class="diff-container" style="margin-top: 4px;">{{ p.command }}</pre>
+                        </div>
+
+                        {% if p.suggestion %}
+                        <div class="suggestion-box" style="margin-bottom: 16px; padding: 10px 14px; font-size: 13px;">
+                            <strong>🛡️ Safer Alternative Proposed:</strong> {{ p.suggestion }}
+                        </div>
+                        {% endif %}
+
+                        {% if p.effective_tier == 'CRITICAL' or p.risk_tier == 'CRITICAL' %}
+                        <form method="POST" action="{{ url_for('resolve', action_id=p.id, decision='approve') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <div class="typed-confirm-box">
+                                <p>⚠️ <strong>CRITICAL RISK CONFIRMATION:</strong> In development mode, approving a CRITICAL tier operation requires explicit confirmation. Type <code>YES</code> below to approve.</p>
+                                <input type="text" name="typed_confirmation" class="typed-input" placeholder="Type YES to confirm" required autocomplete="off">
+                            </div>
+                            <div class="btn-action-group">
+                                <button type="submit" class="btn-sm btn-approve" style="padding: 7px 16px;">Approve Action (CRITICAL)</button>
+                            </div>
+                        </form>
+                        {% else %}
+                        <div class="btn-action-group" style="margin-bottom: 8px;">
+                            <form method="POST" action="{{ url_for('resolve', action_id=p.id, decision='approve') }}" style="display:inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-sm btn-approve" style="padding: 7px 16px;">Approve Action</button>
+                            </form>
+                        </div>
+                        {% endif %}
+
+                        <div class="btn-action-group" style="margin-top: 8px;">
+                            <form method="POST" action="{{ url_for('resolve', action_id=p.id, decision='reject') }}" style="display:inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-sm btn-reject" style="padding: 7px 16px;">Reject Action</button>
+                            </form>
+                            {% if p.suggestion %}
+                            <form method="POST" action="{{ url_for('resolve', action_id=p.id, decision='alternative') }}" style="display:inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-sm btn-alt" style="padding: 7px 16px;">Execute Safer Alternative</button>
+                            </form>
+                            {% endif %}
+                            <button class="btn-sm btn-secondary" onclick="openFlagModal({{ p.id }}, '{{ p.effective_tier or p.risk_tier }}')">Flag Inaccurate Tier</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="panel-card empty-state">
+                    <svg class="empty-state-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    <p style="font-size: 15px; color: #fff; margin-bottom: 4px;">Queue Clear</p>
+                    <p>There are no actions currently pending operator review.</p>
+                </div>
+                {% endif %}
+            </section>
+
+            <!-- TAB 4: PR-STYLE REVIEW VIEW -->
+            <section id="tab-pr-review" class="tab-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">PR-Style High & Critical Review</h1>
+                        <p class="page-subtitle">GitHub Pull-Request style blast radius inspection, code impact diffs, and reversibility analysis.</p>
+                    </div>
+                </div>
+
+                <div class="pr-container">
+                    <!-- Left List of Actions -->
+                    <div class="pr-list">
+                        <div class="pr-list-header">
+                            <span>High / Critical Actions</span>
+                            <span class="badge risk-HIGH">FILTERED</span>
+                        </div>
+                        {% for a in actions if a.risk_tier in ['HIGH', 'CRITICAL'] or a.effective_tier in ['HIGH', 'CRITICAL'] %}
+                        <div class="pr-item {% if loop.first %}selected{% endif %}" onclick="loadPRAction({{ a.id }}, this)">
+                            <div class="pr-item-top">
+                                <span class="pr-item-id">#{{ a.id }}</span>
+                                <span class="badge risk-{{ a.effective_tier or a.risk_tier }}">{{ a.effective_tier or a.risk_tier }}</span>
+                            </div>
+                            <div class="pr-item-cmd">{{ a.command }}</div>
+                        </div>
+                        {% else %}
+                        <div class="empty-state" style="padding: 24px;">No HIGH or CRITICAL actions logged yet.</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Right PR Review Sheet -->
+                    <div class="pr-detail-pane" id="pr-detail-pane">
+                        <div class="pr-banner">
+                            <div class="pr-title-group">
+                                <h3 id="pr-view-title">Select an action to inspect</h3>
+                                <p id="pr-view-subtitle" style="font-size: 12px; color: var(--text-dim);">Detailed impact preview and security rationale</p>
+                            </div>
+                            <div id="pr-view-badges"></div>
+                        </div>
+
+                        <div class="blast-grid">
+                            <div class="blast-item">
+                                <div class="blast-label">Target Working Directory</div>
+                                <div class="blast-value" id="pr-view-cwd">&mdash;</div>
+                            </div>
+                            <div class="blast-item">
+                                <div class="blast-label">Preview SHA-256 Hash</div>
+                                <div class="blast-value" id="pr-view-hash" style="font-family: monospace; font-size: 11px;">&mdash;</div>
+                            </div>
+                            <div class="blast-item">
+                                <div class="blast-label">Safety Snapshot</div>
+                                <div class="blast-value" id="pr-view-backup">&mdash;</div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 12px; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">
+                            Proposed Execution Script / Command:
+                        </div>
+                        <pre class="diff-container" id="pr-view-diff">// Select an action from the left pane</pre>
+
+                        <div style="margin-bottom: 12px; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">
+                            Security Engine Rationale & Audit Trail:
+                        </div>
+                        <div id="pr-view-audit" style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px;">
+                            Detailed policy reasoning will appear here.
+                        </div>
+
+                        <div id="pr-view-controls"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: VERSION HISTORY & ROLLBACK -->
+            <section id="tab-versions" class="tab-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Version History & Rollback Controls</h1>
+                        <p class="page-subtitle">Automatic pre-modification snapshots. Restore workspace files to exact historical checkpoints.</p>
+                    </div>
+                </div>
+
+                <div class="data-table-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Saved At</th>
+                                <th>File Target Path</th>
+                                <th>Snapshot Blob</th>
+                                <th>Reason / Trigger</th>
+                                <th>Rollback Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in checkpoints %}
+                            <tr>
+                                <td class="timestamp-text">{{ c.timestamp.split("T")[1].split(".")[0] if 'T' in c.timestamp else c.timestamp }}</td>
+                                <td style="font-family: monospace; font-size: 12.5px; color: #fff;">{{ c.file_path }}</td>
+                                <td style="font-family: monospace; font-size: 11px; color: var(--text-dim);">{{ c.snapshot_path }}</td>
+                                <td style="font-size: 12.5px; color: var(--text-muted);">{{ c.description }}</td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('rollback', checkpoint_id=c.id) }}" onsubmit="return confirm('Restore file to checkpoint #{{ c.id }}?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn-sm btn-approve">Restore Version</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="empty-state">No checkpoints saved yet &mdash; automatic checkpoints are created prior to file overwrites, deletions, or destructive writes.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 6: PROVENANCE & ORIGIN -->
+            <section id="tab-provenance" class="tab-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Provenance & Action Origin Tracking</h1>
+                        <p class="page-subtitle">Feature 10 persistent ledger linking actions to untrusted remote context ingestions to block indirect prompt injections.</p>
+                    </div>
+                </div>
+
+                <div class="overview-split">
+                    <!-- Context Ingestions -->
+                    <div class="panel-card">
+                        <div class="panel-card-title">
+                            <span>Context Ingestions Ledger</span>
+                            <span class="brand-version">FEATURE 10</span>
+                        </div>
+                        <div class="data-table-card">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Source Kind</th>
+                                        <th>Trust Level</th>
+                                        <th>Source Reference</th>
+                                        <th>Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for ci in provenance_records %}
+                                    <tr>
+                                        <td style="font-weight: 600; color: #fff;">{{ ci.source_kind }}</td>
+                                        <td>
+                                            <span class="badge {% if ci.trust_level == 'untrusted' %}risk-HIGH{% else %}risk-LOW{% endif %}">
+                                                {{ ci.trust_level }}
+                                            </span>
+                                        </td>
+                                        <td style="font-family: monospace; font-size: 11px; color: var(--text-muted);">{{ ci.source_ref }}</td>
+                                        <td class="timestamp-text">{{ ci.timestamp.split("T")[1].split(".")[0] if 'T' in ci.timestamp else ci.timestamp }}</td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="4" class="empty-state">No remote context ingestions captured in this session.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Evidence Escalation Links -->
+                    <div class="panel-card">
+                        <div class="panel-card-title">
+                            <span>Matched Evidence Links</span>
+                            <span class="brand-version">ESCALATION</span>
+                        </div>
+                        <div class="data-table-card">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Action</th>
+                                        <th>Evidence Type</th>
+                                        <th>Matched Entity</th>
+                                        <th>Tier Escalation</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for pe in provenance_evidence %}
+                                    <tr>
+                                        <td>#{{ pe.action_id }}</td>
+                                        <td style="font-size: 12px; color: var(--text-muted);">{{ pe.evidence_type }}</td>
+                                        <td><code class="command-code">{{ pe.matched_entity_val }}</code></td>
+                                        <td><span class="badge risk-{{ pe.effective_tier }}">{{ pe.effective_tier }}</span></td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="4" class="empty-state">No untrusted entity links matched to downstream commands.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 7: WRONG-RATING QUEUE -->
+            <section id="tab-wrong-rating" class="tab-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Feature 14 Wrong-Rating Queue</h1>
+                        <p class="page-subtitle">Human-in-the-loop feedback queue to calibrate risk models and export labeled datasets.</p>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('export_flags') }}" class="btn-sm btn-secondary" style="padding: 7px 14px;">
+                            📥 Export Labeled Calibration Dataset (JSON)
+                        </a>
+                    </div>
+                </div>
+
+                <div class="data-table-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Flag ID</th>
+                                <th>Action #</th>
+                                <th>Command</th>
+                                <th>Assigned Tier</th>
+                                <th>User Suggested</th>
+                                <th>Reason & Notes</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for f in flags %}
+                            <tr>
+                                <td>#{{ f.flag_id }}</td>
+                                <td>#{{ f.action_id }}</td>
+                                <td><code class="command-code">{{ f.command }}</code></td>
+                                <td><span class="badge risk-{{ f.risk_tier }}">{{ f.risk_tier }}</span></td>
+                                <td><span class="badge risk-{{ f.correct_tier or 'UNKNOWN' }}">{{ f.correct_tier or 'N/A' }}</span></td>
+                                <td style="font-size: 12px; color: var(--text-muted);">
+                                    <strong>{{ f.reason }}</strong>
+                                    {% if f.notes %}<br><span style="color: var(--text-dim);">{{ f.notes }}</span>{% endif %}
+                                </td>
+                                <td>
+                                    {% if f.reviewed %}
+                                    <span class="badge status-approved">{{ f.resolution }}</span>
+                                    {% else %}
+                                    <span class="badge status-pending">Unreviewed</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="empty-state">No actions flagged for calibration. You can flag any action's rating from the Live Monitoring feed.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 8: ACTIVITY SUMMARY & AUDIT -->
+            <section id="tab-history" class="tab-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Activity Summary & Audit Log</h1>
+                        <p class="page-subtitle">Cryptographic SHA-256 event log, session aggregation, and formula-injection safe export.</p>
+                    </div>
+                    <div style="display:flex; gap: 8px;">
+                        <a href="{{ url_for('export_audit', format='json') }}" class="btn-sm btn-secondary" style="padding: 7px 12px;">Export Audit (JSON)</a>
+                        <a href="{{ url_for('export_audit', format='csv') }}" class="btn-sm btn-secondary" style="padding: 7px 12px;">Export Audit (CSV)</a>
+                    </div>
+                </div>
+
+                <div class="panel-card" style="margin-bottom: 20px;">
+                    <div class="panel-card-title">
+                        <span>Generate Markdown Session Report</span>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="report-session-id" class="search-box" style="width: 320px;" placeholder="Enter session_id (e.g. s1, antigravity-run)">
+                        <button class="btn-sm btn-alt" onclick="fetchSessionSummary()">Generate Report</button>
+                    </div>
+                    <div id="session-summary-output" style="margin-top: 14px; display: none;">
+                        <pre class="diff-container" id="session-summary-text" style="max-height: 280px;"></pre>
+                    </div>
+                </div>
+
+                <div class="data-table-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Action #</th>
+                                <th>Timestamp</th>
+                                <th>Command</th>
+                                <th>Risk Tier</th>
+                                <th>Status</th>
+                                <th>Session ID</th>
+                                <th>Tool Use ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for a in actions %}
+                            <tr>
+                                <td>#{{ a.id }}</td>
+                                <td class="timestamp-text">{{ a.timestamp }}</td>
+                                <td><code class="command-code">{{ a.command }}</code></td>
+                                <td><span class="badge risk-{{ a.effective_tier or a.risk_tier }}">{{ a.effective_tier or a.risk_tier }}</span></td>
+                                <td><span class="badge status-{{ a.status }}">{{ a.status }}</span></td>
+                                <td style="font-size: 11.5px; color: var(--text-dim);">{{ a.session_id or 'default' }}</td>
+                                <td style="font-size: 11.5px; color: var(--text-dim);">{{ a.tool_use_id or 'antigravity-hook' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="7" class="empty-state">No audit events logged.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 9: SETTINGS & SYSTEM STATUS -->
+            <section id="tab-settings" class="tab-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Settings & Milestone 5 Architecture Posture</h1>
+                        <p class="page-subtitle">Security parameters, authentication defenses, and explicit OS boundary disclosure.</p>
+                    </div>
+                </div>
+
+                <div class="panel-card" style="margin-bottom: 20px;">
+                    <div class="panel-card-title">
+                        <span>Milestone 5 Security Status & Boundary Disclosure</span>
+                        <span class="brand-version" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;">CRITICAL RESTRICTION</span>
+                    </div>
+                    <div style="font-size: 13.5px; color: var(--text-muted); line-height: 1.6;">
+                        <p style="margin-bottom: 10px;">
+                            Checkpoint is currently running in <strong>Development Mode</strong> (<code>CHECKPOINT_DEV_MODE=1</code>).
+                            In this mode:
+                        </p>
+                        <ul style="margin-left: 20px; margin-bottom: 12px; color: #cbd5e1;">
+                            <li>The audit log and security state reside in workspace storage (<code>storage/db/checkpoint.db</code>).</li>
+                            <li><strong>OS-level ACL boundary isolation is not active</strong>: the agent and the security interceptor run under the same Windows user account.</li>
+                            <li>Approvals for <strong>CRITICAL</strong> tier actions operate with explicit typed <code>YES</code> confirmation in development mode, but <strong>must not be represented as cryptographically isolated</strong> until the Milestone 5 <code>CheckpointSvc</code> Windows service and hardened DPAPI accounts are fully provisioned.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="overview-split">
+                    <div class="panel-card">
+                        <div class="panel-card-title">
+                            <span>Cryptographic Key Management</span>
+                        </div>
+                        <div class="posture-list">
+                            <div class="posture-item">
+                                <span class="posture-label">Session Key Algorithm:</span>
+                                <span class="posture-val">Argon2id (HMAC-SHA256)</span>
+                            </div>
+                            <div class="posture-item">
+                                <span class="posture-label">Cookie Protection:</span>
+                                <span class="posture-val">SameSite=Strict &bull; HTTPOnly</span>
+                            </div>
+                            <div class="posture-item">
+                                <span class="posture-label">Anti-Rebinding Check:</span>
+                                <span class="posture-val">Strict Host & Origin Enforced</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-card">
+                        <div class="panel-card-title">
+                            <span>Agent Interception Hook</span>
+                        </div>
+                        <div class="posture-list">
+                            <div class="posture-item">
+                                <span class="posture-label">Hook Spec:</span>
+                                <span class="posture-val"><code>.agents/hooks.json</code></span>
+                            </div>
+                            <div class="posture-item">
+                                <span class="posture-label">Interception Adapter:</span>
+                                <span class="posture-val"><code>core/antigravity_adapter.py</code></span>
+                            </div>
+                            <div class="posture-item">
+                                <span class="posture-label">Default Policy:</span>
+                                <span class="posture-val" style="color: var(--risk-low);">Fail-Closed</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- MODAL: Flag Risk Rating (Feature 14) -->
+    <div id="flag-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h4>Flag Inaccurate Risk Rating</h4>
+                <button class="modal-close" onclick="closeFlagModal()">&times;</button>
+            </div>
+            <form id="flag-form" onsubmit="submitFlagForm(event)">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" id="flag-action-id" name="action_id" value="">
+                <div class="modal-body">
+                    <div class="modal-field">
+                        <label>Assigned Risk Tier</label>
+                        <input type="text" id="flag-current-tier" readonly style="color: var(--text-dim);">
+                    </div>
+                    <div class="modal-field">
+                        <label>Recommended Correct Tier</label>
+                        <select name="correct_tier" required>
+                            <option value="LOW">LOW</option>
+                            <option value="MEDIUM">MEDIUM</option>
+                            <option value="HIGH">HIGH</option>
+                            <option value="CRITICAL">CRITICAL</option>
+                        </select>
+                    </div>
+                    <div class="modal-field">
+                        <label>Reason for Correction</label>
+                        <input type="text" name="reason" placeholder="e.g., Harmless query mistakenly flagged, or destructive flag missed" required>
+                    </div>
+                    <div class="modal-field">
+                        <label>Operator Review Notes (Optional)</label>
+                        <textarea name="notes" placeholder="Technical explanation for model calibration"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-sm btn-secondary" onclick="closeFlagModal()">Cancel</button>
+                    <button type="submit" class="btn-sm btn-alt">Submit to Calibration Queue</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <table id="actions-table" {% if not actions %}style="display:none;"{% endif %}>
-        <thead>
-            <tr>
-                <th>Time</th><th>Type</th><th>Action</th><th>Risk Level</th><th>What Happened</th><th>Decision</th>
-            </tr>
-        </thead>
-        <tbody id="actions-body">
-            {% for a in actions %}
-            <tr id="action-row-{{ a.id }}">
-                <td class="timestamp-cell">{{ a.timestamp.split("T")[1].split(".")[0] }}</td>
-                <td>{{ a.action_type }}</td>
-                <td class="command-cell">{{ a.command }}
-                    {% if a.status == "pending" and a.suggestion %}
-                    <div class="suggestion-box"><strong>Safer option:</strong> {{ a.suggestion }}</div>
-                    {% endif %}
-                </td>
-                <td><span class="badge risk-{{ a.risk_tier }}">{{ a.risk_tier }}</span></td>
-                <td><span class="badge status-{{ a.status }}" id="status-badge-{{ a.id }}">{{ a.status }}</span></td>
-                <td class="action-buttons" id="action-buttons-{{ a.id }}">
-                    {% if a.status == "pending" %}
-                    <form method="post" action="{{ url_for('resolve', action_id=a.id, decision='approve') }}" style="display:inline">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn-approve">Approve</button>
-                    </form>
-                    <form method="post" action="{{ url_for('resolve', action_id=a.id, decision='reject') }}" style="display:inline">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn-reject">Reject</button>
-                    </form>
-                    {% if a.suggestion %}
-                    <form method="post" action="{{ url_for('resolve', action_id=a.id, decision='alternative') }}" style="display:inline">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn-alt">Do this instead</button>
-                    </form>
-                    {% endif %}
-                    {% else %}&mdash;{% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <!-- MODAL: Action Detail Inspector -->
+    <div id="inspect-modal" class="modal-overlay">
+        <div class="modal-card" style="width: 680px;">
+            <div class="modal-header">
+                <h4 id="inspect-modal-title">Action Forensic Inspector</h4>
+                <button class="modal-close" onclick="closeInspectModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 520px; overflow-y: auto;">
+                <div class="blast-grid" style="margin-bottom: 14px;">
+                    <div class="blast-item">
+                        <div class="blast-label">Status</div>
+                        <div class="blast-value" id="inspect-status">&mdash;</div>
+                    </div>
+                    <div class="blast-item">
+                        <div class="blast-label">Risk Level</div>
+                        <div class="blast-value" id="inspect-tier">&mdash;</div>
+                    </div>
+                    <div class="blast-item">
+                        <div class="blast-label">Session ID</div>
+                        <div class="blast-value" id="inspect-session">&mdash;</div>
+                    </div>
+                </div>
 
-    <div id="empty-state-view" class="empty-state" {% if actions %}style="display:none;"{% endif %}>
-        No actions logged yet — run the interceptor or file_ops to see activity here.
+                <div style="font-size: 11.5px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px;">Command Executed:</div>
+                <pre class="diff-container" id="inspect-cmd" style="margin-bottom: 14px;"></pre>
+
+                <div style="font-size: 11.5px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px;">Output (Redacted & Capped):</div>
+                <pre class="diff-container" id="inspect-output" style="max-height: 140px; margin-bottom: 14px;">(No output recorded)</pre>
+
+                <div style="font-size: 11.5px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px;">SHA-256 Audit Event Trail:</div>
+                <div id="inspect-history" style="font-size: 12px; color: var(--text-muted); font-family: monospace;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-sm btn-secondary" onclick="closeInspectModal()">Close</button>
+            </div>
+        </div>
     </div>
 
+    <!-- Client-side Interactive Engine -->
     <script>
-        // Feature 15: Browser Notification Permission & Dispatch
+        // Tab Navigation
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+            const targetTab = document.getElementById('tab-' + tabId);
+            if (targetTab) targetTab.classList.add('active');
+
+            const navs = document.querySelectorAll('.nav-item');
+            navs.forEach(nav => {
+                if (nav.getAttribute('onclick') && nav.getAttribute('onclick').includes(tabId)) {
+                    nav.classList.add('active');
+                }
+            });
+            window.location.hash = tabId;
+        }
+
+        // On load hash check
+        if (window.location.hash) {
+            const h = window.location.hash.replace('#', '');
+            if (document.getElementById('tab-' + h)) {
+                switchTab(h);
+            }
+        }
+
+        // Browser Notifications
         function updateNotifyButton() {
             const btn = document.getElementById("notify-perm-btn");
             if (!("Notification" in window)) {
@@ -109,13 +1863,14 @@
                 return;
             }
             if (Notification.permission === "granted") {
-                btn.innerText = "✓ Notifications Active";
+                btn.innerText = "✓ Alerts Active";
                 btn.disabled = true;
-                btn.style.background = "#2E7D32";
+                btn.style.borderColor = "var(--risk-low)";
+                btn.style.color = "var(--risk-low)";
             } else if (Notification.permission === "denied") {
-                btn.innerText = "✕ Notifications Blocked";
+                btn.innerText = "✕ Alerts Blocked";
                 btn.disabled = true;
-                btn.style.background = "#888";
+                btn.style.color = "var(--text-dim)";
             }
         }
         updateNotifyButton();
@@ -126,9 +1881,151 @@
             }
         }
 
-        // Live SSE Streaming and Deduplication
-        const processedEvents = new Set();
+        // Live Table Filtering & Search
+        let currentFilter = 'ALL';
+        function setLiveFilter(filterName, btn) {
+            currentFilter = filterName;
+            document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            filterLiveTable();
+        }
 
+        function filterLiveTable() {
+            const search = document.getElementById('live-search').value.toLowerCase();
+            const rows = document.querySelectorAll('#actions-body tr');
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                const tier = (row.getAttribute('data-tier') || '').toUpperCase();
+                const status = (row.getAttribute('data-status') || '').toLowerCase();
+
+                let matchesFilter = false;
+                if (currentFilter === 'ALL') matchesFilter = true;
+                else if (currentFilter === 'pending') matchesFilter = (status === 'pending');
+                else matchesFilter = (tier === currentFilter);
+
+                const matchesSearch = text.includes(search);
+                row.style.display = (matchesFilter && matchesSearch) ? '' : 'none';
+            });
+        }
+
+        // Flag Modal
+        function openFlagModal(actionId, tier) {
+            document.getElementById('flag-action-id').value = actionId;
+            document.getElementById('flag-current-tier').value = tier;
+            document.getElementById('flag-modal').classList.add('active');
+        }
+        function closeFlagModal() {
+            document.getElementById('flag-modal').classList.remove('active');
+        }
+        async function submitFlagForm(e) {
+            e.preventDefault();
+            const form = document.getElementById('flag-form');
+            const actionId = document.getElementById('flag-action-id').value;
+            const formData = new FormData(form);
+
+            const res = await fetch('/flag/' + actionId, {
+                method: 'POST',
+                body: formData
+            });
+            if (res.ok) {
+                alert('Rating flagged successfully for review.');
+                closeFlagModal();
+                form.reset();
+            } else {
+                alert('Failed to submit flag.');
+            }
+        }
+
+        // Inspect Modal
+        async function inspectAction(actionId) {
+            const res = await fetch('/action/' + actionId);
+            if (!res.ok) return;
+            const data = await res.json();
+
+            document.getElementById('inspect-modal-title').innerText = 'Forensic Inspection &bull; Action #' + data.id;
+            document.getElementById('inspect-status').innerText = data.status;
+            document.getElementById('inspect-tier').innerText = data.effective_tier || data.risk_tier;
+            document.getElementById('inspect-session').innerText = data.session_id || 'default';
+            document.getElementById('inspect-cmd').innerText = data.command;
+            document.getElementById('inspect-output').innerText = data.output || '(No command output recorded)';
+
+            const histEl = document.getElementById('inspect-history');
+            if (data.history && data.history.length > 0) {
+                histEl.innerHTML = data.history.map(h => `
+                    <div style="padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <span style="color:var(--primary);">${h.event_type}</span> &bull; 
+                        <span style="color:var(--text-dim);">${h.timestamp}</span><br>
+                        <span style="color:var(--text-dim); font-size: 10px;">Hash: ${h.event_hash ? h.event_hash.slice(0, 24) + '...' : 'none'}</span>
+                    </div>
+                `).join('');
+            } else {
+                histEl.innerHTML = '<span style="color:var(--text-dim);">No hash chain events available</span>';
+            }
+
+            document.getElementById('inspect-modal').classList.add('active');
+        }
+        function closeInspectModal() {
+            document.getElementById('inspect-modal').classList.remove('active');
+        }
+
+        // PR Review Sheet Loader
+        async function loadPRAction(actionId, elem) {
+            document.querySelectorAll('.pr-item').forEach(el => el.classList.remove('selected'));
+            if (elem) elem.classList.add('selected');
+
+            const res = await fetch('/action/' + actionId);
+            if (!res.ok) return;
+            const act = await res.json();
+
+            document.getElementById('pr-view-title').innerText = 'Action #' + act.id + ' Security Impact Review';
+            document.getElementById('pr-view-subtitle').innerText = 'Evaluated at ' + act.timestamp;
+            document.getElementById('pr-view-badges').innerHTML = `
+                <span class="badge risk-${act.effective_tier || act.risk_tier}">${act.effective_tier || act.risk_tier}</span>
+                <span class="badge status-${act.status}">${act.status}</span>
+            `;
+
+            document.getElementById('pr-view-cwd').innerText = act.cwd || 'Workspace Root';
+            document.getElementById('pr-view-hash').innerText = act.preview_hash || '(Pre-execution hash calculated)';
+            document.getElementById('pr-view-backup').innerText = act.backup_hash ? 'Verified Snapshot Taken' : 'No pre-modification file snapshot';
+
+            document.getElementById('pr-view-diff').innerText = act.command;
+            document.getElementById('pr-view-audit').innerText = act.provenance_summary || (
+                'Action was intercepted by the Antigravity hook. Classified as ' + (act.effective_tier || act.risk_tier) + ' by Checkpoint risk policy rules.'
+            );
+
+            const controlsEl = document.getElementById('pr-view-controls');
+            if (act.status === 'pending') {
+                controlsEl.innerHTML = `
+                    <div class="btn-action-group">
+                        <button class="btn-sm btn-approve" onclick="switchTab('approvals')">Proceed to Approvals Queue &rarr;</button>
+                    </div>
+                `;
+            } else {
+                controlsEl.innerHTML = `
+                    <div style="font-size: 12px; color: var(--text-dim);">Resolution already finalized: <strong>${act.status}</strong>.</div>
+                `;
+            }
+        }
+
+        // Fetch Session Summary
+        async function fetchSessionSummary() {
+            const sid = document.getElementById('report-session-id').value.trim();
+            if (!sid) {
+                alert('Please enter a session_id');
+                return;
+            }
+            const res = await fetch('/session/' + encodeURIComponent(sid) + '/summary?format=markdown');
+            if (res.ok) {
+                const text = await res.text();
+                document.getElementById('session-summary-text').innerText = text;
+                document.getElementById('session-summary-output').style.display = 'block';
+            } else {
+                alert('Session not found or error loading summary.');
+            }
+        }
+
+        // SSE Live Stream Handling
+        const processedEvents = new Set();
         function handleIncomingEvent(ev) {
             if (!ev || !ev.action_id) return;
             const dedupKey = ev.action_id + ":" + ev.event_type;
@@ -139,7 +2036,7 @@
             if ("Notification" in window && Notification.permission === "granted") {
                 if (ev.event_type === "approval_requested") {
                     new Notification("Checkpoint: Approval Required [" + ev.risk_tier + "]", {
-                        body: "Action #" + ev.action_id + ": " + ev.command.slice(0, 80),
+                        body: "Action #" + ev.action_id + ": " + (ev.command || '').slice(0, 80),
                         tag: "action_req_" + ev.action_id
                     });
                 } else if (ev.event_type === "approval_expired") {
@@ -150,7 +2047,7 @@
                 }
             }
 
-            // Update UI row if existing
+            // Update row if existing
             const existingRow = document.getElementById("action-row-" + ev.action_id);
             if (existingRow) {
                 const badge = document.getElementById("status-badge-" + ev.action_id);
@@ -160,10 +2057,15 @@
                 }
                 const btnCell = document.getElementById("action-buttons-" + ev.action_id);
                 if (btnCell && ev.status !== "pending") {
-                    btnCell.innerHTML = "&mdash;";
+                    btnCell.innerHTML = `
+                        <div class="btn-action-group">
+                            <button class="btn-sm btn-secondary" onclick="inspectAction(${ev.action_id})">Inspect</button>
+                            <button class="btn-sm btn-secondary" onclick="openFlagModal(${ev.action_id}, '${ev.risk_tier || 'LOW'}')">Flag</button>
+                        </div>
+                    `;
                 }
             } else if (ev.command) {
-                // Insert new row if table exists or switch from empty state
+                // Prepend new row to table
                 const table = document.getElementById("actions-table");
                 const tbody = document.getElementById("actions-body");
                 const emptyView = document.getElementById("empty-state-view");
@@ -173,18 +2075,30 @@
 
                     const tr = document.createElement("tr");
                     tr.id = "action-row-" + ev.action_id;
+                    tr.setAttribute("data-tier", ev.risk_tier || "LOW");
+                    tr.setAttribute("data-status", ev.status || "executed");
+
                     const timePart = (ev.timestamp && ev.timestamp.includes("T")) 
                         ? ev.timestamp.split("T")[1].split(".")[0] 
                         : "Just now";
                     tr.innerHTML = `
-                        <td class="timestamp-cell">${timePart}</td>
-                        <td>${ev.action_type || 'bash'}</td>
-                        <td class="command-cell">${ev.command}</td>
+                        <td class="timestamp-text">${timePart}</td>
+                        <td style="color: var(--text-dim); font-size: 12px;">${ev.action_type || 'bash'}</td>
+                        <td><code class="command-code" title="${ev.command}">${ev.command}</code></td>
                         <td><span class="badge risk-${ev.risk_tier}">${ev.risk_tier}</span></td>
                         <td><span class="badge status-${ev.status}" id="status-badge-${ev.action_id}">${ev.status}</span></td>
-                        <td class="action-buttons" id="action-buttons-${ev.action_id}">&mdash;</td>
+                        <td class="action-buttons" id="action-buttons-${ev.action_id}">
+                            <div class="btn-action-group">
+                                <button class="btn-sm btn-secondary" onclick="inspectAction(${ev.action_id})">Inspect</button>
+                                <button class="btn-sm btn-secondary" onclick="openFlagModal(${ev.action_id}, '${ev.risk_tier || 'LOW'}')">Flag</button>
+                            </div>
+                        </td>
                     `;
                     tbody.insertBefore(tr, tbody.firstChild);
+
+                    // Update KPI counters
+                    const kpiTotal = document.getElementById('kpi-total');
+                    if (kpiTotal) kpiTotal.innerText = parseInt(kpiTotal.innerText || 0) + 1;
                 }
             }
         }

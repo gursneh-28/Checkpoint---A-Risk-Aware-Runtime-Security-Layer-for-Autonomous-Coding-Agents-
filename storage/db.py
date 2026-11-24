@@ -1071,6 +1071,48 @@ def get_summary_stats() -> Dict[str, Any]:
         }
 
 
+def get_provenance_records(limit: int = 50) -> List[Dict[str, Any]]:
+    """Retrieve context ingestions for the provenance dashboard view."""
+    with _connect() as conn:
+        try:
+            rows = conn.execute("""
+                SELECT id, ingestion_id, session_id, event_type, source_kind,
+                       source_ref, trust_level, content_hash, redacted_excerpt, timestamp
+                FROM context_ingestions
+                ORDER BY id DESC LIMIT ?
+            """, (int(limit),)).fetchall()
+            cols = ["id", "ingestion_id", "session_id", "event_type", "source_kind",
+                    "source_ref", "trust_level", "content_hash", "redacted_excerpt", "timestamp"]
+            return [dict(zip(cols, r)) for r in rows]
+        except Exception:
+            return []
+
+
+def get_provenance_evidence(action_id: Optional[int] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    """Retrieve provenance link evidence for the provenance dashboard view."""
+    with _connect() as conn:
+        try:
+            sql = """
+                SELECT pe.id, pe.action_id, pe.ingestion_id, pe.evidence_type,
+                       pe.matched_entity_type, pe.matched_entity_val, pe.strength, pe.created_at,
+                       a.command, a.risk_tier, COALESCE(a.effective_tier, a.risk_tier)
+                FROM action_provenance_evidence pe
+                LEFT JOIN actions a ON pe.action_id = a.id
+            """
+            params: List[Any] = []
+            if action_id:
+                sql += " WHERE pe.action_id = ?"
+                params.append(action_id)
+            sql += f" ORDER BY pe.id DESC LIMIT {int(limit)}"
+            rows = conn.execute(sql, params).fetchall()
+            cols = ["id", "action_id", "ingestion_id", "evidence_type",
+                    "matched_entity_type", "matched_entity_val", "strength", "created_at",
+                    "command", "risk_tier", "effective_tier"]
+            return [dict(zip(cols, r)) for r in rows]
+        except Exception:
+            return []
+
+
 # ---------------------------------------------------------------------------
 # Checkpoint (file version history) API — Feature 7
 # ---------------------------------------------------------------------------

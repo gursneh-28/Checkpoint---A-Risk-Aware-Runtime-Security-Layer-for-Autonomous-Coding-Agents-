@@ -20,6 +20,11 @@ from storage.db import (
     export_flagged_dataset,
     get_alerts,
     get_events_since,
+    get_summary_stats,
+    get_action,
+    get_action_history,
+    get_provenance_records,
+    get_provenance_evidence,
 )
 from core.sandbox import rollback_checkpoint
 from core.session_summary import generate_session_summary, format_session_summary_markdown
@@ -171,11 +176,73 @@ def dashboard():
     for row in raw_rows:
         suggestion = json.loads(row[7]) if len(row) > 7 and row[7] else None
         actions.append({
-            "id": row[0], "timestamp": row[1], "action_type": row[2],
-            "command": row[3], "risk_tier": row[4], "status": row[5],
+            "id": row[0],
+            "timestamp": row[1],
+            "action_type": row[2],
+            "command": row[3],
+            "risk_tier": row[4],
+            "status": row[5],
+            "output": row[6] if len(row) > 6 else "",
             "suggestion": suggestion["text"] if suggestion else None,
+            "suggestion_raw": suggestion,
+            "tool_use_id": row[8] if len(row) > 8 else "",
+            "session_id": row[9] if len(row) > 9 else "",
+            "base_tier": row[10] if len(row) > 10 else row[4],
+            "effective_tier": row[11] if len(row) > 11 else row[4],
+            "preview_hash": row[12] if len(row) > 12 else "",
+            "manifest_hash": row[13] if len(row) > 13 else "",
+            "backup_hash": row[14] if len(row) > 14 else "",
+            "policy_version": row[15] if len(row) > 15 else "1",
+            "cwd": row[16] if len(row) > 16 else "",
+            "provenance_summary": row[17] if len(row) > 17 else "",
+            "provenance_coverage": row[18] if len(row) > 18 else "",
         })
-    return render_template("index.html", actions=actions)
+
+    # Summary statistics
+    stats = get_summary_stats()
+    tier_counts = {"LOW": 0, "MEDIUM": 0, "HIGH": 0, "CRITICAL": 0}
+    for a in actions:
+        eff = a.get("effective_tier") or a.get("risk_tier") or "LOW"
+        if eff in tier_counts:
+            tier_counts[eff] += 1
+        else:
+            tier_counts[eff] = tier_counts.get(eff, 0) + 1
+    stats["tier_breakdown"] = tier_counts
+
+    # Checkpoints
+    raw_checkpoints = get_all_checkpoints()
+    checkpoint_list = []
+    for r in raw_checkpoints:
+        checkpoint_list.append({
+            "id": r[0], "timestamp": r[1], "file_path": r[2],
+            "snapshot_path": r[3], "description": r[4] or "Pre-action safety snapshot",
+        })
+
+    # Flags & alerts
+    flags = list_flagged_actions(unreviewed_only=False)
+    alerts = get_alerts(limit=30)
+
+    # Provenance data
+    provenance_records = get_provenance_records(limit=30)
+    provenance_evidence = get_provenance_evidence(limit=30)
+
+    # Security boundary configuration disclosure
+    is_dev_mode = os.getenv("CHECKPOINT_DEV_MODE") == "1"
+    can_crit, crit_reason = can_approve_critical()
+
+    return render_template(
+        "index.html",
+        actions=actions,
+        stats=stats,
+        checkpoints=checkpoint_list,
+        flags=flags,
+        alerts=alerts,
+        provenance_records=provenance_records,
+        provenance_evidence=provenance_evidence,
+        is_dev_mode=is_dev_mode,
+        can_approve_critical=can_crit,
+        critical_approval_reason=crit_reason,
+    )
 
 
 DECISIONS = {"approve": "approved", "reject": "rejected", "alternative": "alternative"}
@@ -222,6 +289,7 @@ def action_detail(action_id):
     if not action_row:
         abort(404)
     suggestion = json.loads(action_row[7]) if len(action_row) > 7 and action_row[7] else None
+    history = get_action_history(action_id)
     return {
         "id": action_row[0],
         "timestamp": action_row[1],
@@ -229,9 +297,19 @@ def action_detail(action_id):
         "command": action_row[3],
         "risk_tier": action_row[4],
         "status": action_row[5],
+        "output": action_row[6] if len(action_row) > 6 else "",
         "suggestion": suggestion["text"] if suggestion else None,
+        "suggestion_raw": suggestion,
+        "tool_use_id": action_row[8] if len(action_row) > 8 else "",
+        "session_id": action_row[9] if len(action_row) > 9 else "",
+        "base_tier": action_row[10] if len(action_row) > 10 else action_row[4],
         "effective_tier": action_row[11] if len(action_row) > 11 else action_row[4],
         "preview_hash": action_row[12] if len(action_row) > 12 else "",
+        "manifest_hash": action_row[13] if len(action_row) > 13 else "",
+        "backup_hash": action_row[14] if len(action_row) > 14 else "",
+        "cwd": action_row[16] if len(action_row) > 16 else "",
+        "provenance_summary": action_row[17] if len(action_row) > 17 else "",
+        "history": history,
     }
 
 @app.route("/checkpoints")

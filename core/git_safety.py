@@ -123,6 +123,47 @@ HARD_DENY_COMMANDS = {
 }
 
 
+def is_destructive_git_op(command: str) -> bool:
+    """Return True if command is a destructive Git operation requiring an external backup."""
+    cmd = command.strip().lower()
+    if not (cmd == "git" or cmd.startswith("git ") or cmd.startswith("git.exe")):
+        return False
+    parts = cmd.split()
+    if len(parts) < 2:
+        return False
+    sub = parts[1]
+    if sub == "reset" and any(arg in parts for arg in ("--hard", "--merge")):
+        return True
+    if sub == "clean" and any(arg in parts for arg in ("-f", "-force", "--force")):
+        return True
+    if sub in ("rebase", "prune"):
+        return True
+    if sub == "branch" and any(arg in parts for arg in ("-d", "-d", "--delete")):
+        return True
+    if sub == "stash" and len(parts) > 2 and parts[2] in ("drop", "clear", "pop"):
+        return True
+    if sub == "push" and any(arg in parts for arg in ("--force", "-f")):
+        return True
+    if sub == "gc" and any("--prune" in arg for arg in parts):
+        return True
+    if sub == "reflog" and len(parts) > 2 and parts[2] == "expire":
+        return True
+    return False
+
+
+def has_verified_backup(repo_root: str, max_age_seconds: int = 600) -> bool:
+    """Check if repository has a verified snapshot within max_age_seconds."""
+    try:
+        net = GitSafetyNet()
+        latest = net.get_latest_backup(repo_root)
+        if not latest or not latest.verified:
+            return False
+        return (time.time() - latest.timestamp) <= max_age_seconds
+    except Exception:
+        return False
+
+
+
 def get_safe_git_env() -> Dict[str, str]:
     """
     Controlled execution environment for Git inspection and backups.
