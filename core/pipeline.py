@@ -24,6 +24,7 @@ Design doc: "Record first, then answer."
 from __future__ import annotations
 
 import os
+import json
 import sys
 import time
 from typing import Optional
@@ -241,7 +242,14 @@ def evaluate(event: Event) -> Decision:
         session_id=event.session_id,
         tool_use_id=event.tool_use_id,
         cwd=event.cwd,
+        preview_data=json.dumps(preview.to_dict()),
     )
+
+    if anomaly_signal.triggered:
+        append_action_event(action_id, "anomaly_detected", {
+            "kind": anomaly_signal.kind,
+            "detail": anomaly_signal.detail,
+        })
 
     # Create pending alert (Feature 15)
     create_alert(action_id, kind="pending_approval")

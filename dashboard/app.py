@@ -52,6 +52,17 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Strict"
 
 
+def _load_json_object(value):
+    """Decode persisted optional JSON fields without breaking the dashboard."""
+    if not value:
+        return None
+    try:
+        decoded = json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    return decoded if isinstance(decoded, dict) else None
+
+
 # ---------------------------------------------------------------------------
 # Host and Origin Validation (DNS rebinding and Cross-Site defense)
 # ---------------------------------------------------------------------------
@@ -195,8 +206,9 @@ def dashboard():
             "backup_hash": row[14] if len(row) > 14 else "",
             "policy_version": row[15] if len(row) > 15 else "1",
             "cwd": row[16] if len(row) > 16 else "",
-            "provenance_summary": row[17] if len(row) > 17 else "",
-            "provenance_coverage": row[18] if len(row) > 18 else "",
+            "preview_data": _load_json_object(row[17] if len(row) > 17 else None),
+            "provenance_summary": row[18] if len(row) > 18 else "",
+            "provenance_coverage": row[19] if len(row) > 19 else "",
         })
 
     # Summary statistics
@@ -227,6 +239,21 @@ def dashboard():
     provenance_records = get_provenance_records(limit=30)
     provenance_evidence = get_provenance_evidence(limit=30)
 
+    # Anomaly signals already recorded in the action journal.
+    anomaly_signals = []
+    for action in actions:
+        for event in get_action_history(action["id"]):
+            if event.get("event_type") != "anomaly_detected":
+                continue
+            payload = _load_json_object(event.get("payload")) or {}
+            anomaly_signals.append({
+                "action_id": action["id"],
+                "command": action["command"],
+                "timestamp": event.get("timestamp") or action["timestamp"],
+                "kind": payload.get("kind") or "Not available",
+                "detail": payload.get("detail") or "Not available",
+                "severity": payload.get("severity") or "Not available",
+            })
     # Security boundary configuration disclosure
     is_dev_mode = os.getenv("CHECKPOINT_DEV_MODE") == "1"
     can_crit, crit_reason = can_approve_critical()
@@ -240,6 +267,7 @@ def dashboard():
         alerts=alerts,
         provenance_records=provenance_records,
         provenance_evidence=provenance_evidence,
+        anomaly_signals=anomaly_signals,
         is_dev_mode=is_dev_mode,
         can_approve_critical=can_crit,
         critical_approval_reason=crit_reason,
@@ -309,7 +337,8 @@ def action_detail(action_id):
         "manifest_hash": action_row[13] if len(action_row) > 13 else "",
         "backup_hash": action_row[14] if len(action_row) > 14 else "",
         "cwd": action_row[16] if len(action_row) > 16 else "",
-        "provenance_summary": action_row[17] if len(action_row) > 17 else "",
+        "preview_data": _load_json_object(action_row[17] if len(action_row) > 17 else None),
+        "provenance_summary": action_row[18] if len(action_row) > 18 else "",
         "history": history,
     }
 

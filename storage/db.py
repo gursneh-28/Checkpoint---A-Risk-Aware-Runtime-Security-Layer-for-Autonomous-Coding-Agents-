@@ -151,24 +151,6 @@ def init_db():
             provenance_summary TEXT,
             provenance_coverage TEXT DEFAULT 'unknown'
         );
-            id              INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp       TEXT NOT NULL,
-            action_type     TEXT NOT NULL,
-            command         TEXT NOT NULL,
-            risk_tier       TEXT NOT NULL,
-            status          TEXT NOT NULL,
-            output          TEXT,
-            suggestion      TEXT,
-            tool_use_id     TEXT,
-            session_id      TEXT,
-            base_tier       TEXT NOT NULL DEFAULT 'UNKNOWN',
-            effective_tier  TEXT NOT NULL DEFAULT 'UNKNOWN',
-            preview_hash    TEXT,
-            manifest_hash   TEXT,
-            backup_hash     TEXT,
-            policy_version  TEXT DEFAULT '1',
-            cwd             TEXT DEFAULT ''
-        );
 
         CREATE TABLE IF NOT EXISTS action_events (
             id                  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -340,6 +322,7 @@ def _upgrade_schema():
             ("backup_hash",    "TEXT"),
             ("policy_version", "TEXT DEFAULT '1'"),
             ("cwd",            "TEXT DEFAULT ''"),
+            ("preview_data",   "TEXT"),
             ("provenance_summary",  "TEXT"),
             ("provenance_coverage", "TEXT DEFAULT 'unknown'"),
         ],
@@ -562,37 +545,6 @@ def log_pending_action(action_type: str, command: str, risk_tier: str,
             VALUES (?, ?, ?, ?, 'pending', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (ts, action_type, command, risk_tier, sugg_json,
                risk_tier, eff, preview_hash, manifest_hash, backup_hash, session_id, tool_use_id, cwd, preview_data))
-        action_id = cur.lastrowid
-        _append_event(conn, action_id, "requested",   {"command": command[:200], "cwd": cwd})
-        _append_event(conn, action_id, "classified",  {"base": risk_tier, "effective": eff})
-        _append_event(conn, action_id, "preview_generated", {"preview_hash": preview_hash})
-        _append_event(conn, action_id, "approval_requested")
-        conn.execute("COMMIT")
-    return action_id
-    command  = _scrub_secrets(command)
-    sugg_json = json.dumps(suggestion) if suggestion else None
-    eff       = effective_tier or risk_tier
-    ts        = datetime.datetime.now(datetime.timezone.utc).isoformat()
-
-    with _connect() as conn:
-        # Idempotency: check for existing tool_use_id
-        if tool_use_id and session_id:
-            existing = conn.execute(
-                "SELECT id FROM actions WHERE tool_use_id=? AND session_id=? LIMIT 1",
-                (tool_use_id, session_id)
-            ).fetchone()
-            if existing:
-                return existing[0]
-
-        conn.execute("BEGIN")
-        cur = conn.execute("""
-            INSERT INTO actions
-              (timestamp, action_type, command, risk_tier, status, output,
-               suggestion, base_tier, effective_tier, preview_hash, manifest_hash, backup_hash,
-               session_id, tool_use_id, cwd)
-            VALUES (?, ?, ?, ?, 'pending', '', ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (ts, action_type, command, risk_tier, sugg_json,
-              risk_tier, eff, preview_hash, manifest_hash, backup_hash, session_id, tool_use_id, cwd))
         action_id = cur.lastrowid
         _append_event(conn, action_id, "requested",   {"command": command[:200], "cwd": cwd})
         _append_event(conn, action_id, "classified",  {"base": risk_tier, "effective": eff})
@@ -1018,7 +970,13 @@ def get_action_history(action_id: int) -> List[Dict[str, Any]]:
 
 def get_all_actions() -> List[Tuple]:
     with _connect() as conn:
-        return conn.execute("SELECT * FROM actions ORDER BY id DESC").fetchall()
+        return conn.execute("""
+            SELECT id, timestamp, action_type, command, risk_tier, status, output,
+                   suggestion, tool_use_id, session_id, base_tier, effective_tier,
+                   preview_hash, manifest_hash, backup_hash, policy_version, cwd,
+                   preview_data, provenance_summary, provenance_coverage
+            FROM actions ORDER BY id DESC
+        """).fetchall()
 
 
 def get_pending_actions() -> List[Dict[str, Any]]:
@@ -1200,7 +1158,7 @@ def _get_action_columns() -> List[str]:
         "id", "timestamp", "action_type", "command", "risk_tier",
         "status", "output", "suggestion", "tool_use_id", "session_id",
         "base_tier", "effective_tier", "preview_hash", "manifest_hash",
-        "backup_hash", "policy_version", "cwd",
+        "backup_hash", "policy_version", "cwd", "preview_data",
         "provenance_summary", "provenance_coverage",
     ]
 
