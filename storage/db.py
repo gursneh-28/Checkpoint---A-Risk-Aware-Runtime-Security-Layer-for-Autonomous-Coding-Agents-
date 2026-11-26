@@ -146,6 +146,27 @@ def init_db():
             manifest_hash   TEXT,
             backup_hash     TEXT,
             policy_version  TEXT DEFAULT '1',
+            cwd             TEXT DEFAULT '',
+            preview_data    TEXT,
+            provenance_summary TEXT,
+            provenance_coverage TEXT DEFAULT 'unknown'
+        );
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp       TEXT NOT NULL,
+            action_type     TEXT NOT NULL,
+            command         TEXT NOT NULL,
+            risk_tier       TEXT NOT NULL,
+            status          TEXT NOT NULL,
+            output          TEXT,
+            suggestion      TEXT,
+            tool_use_id     TEXT,
+            session_id      TEXT,
+            base_tier       TEXT NOT NULL DEFAULT 'UNKNOWN',
+            effective_tier  TEXT NOT NULL DEFAULT 'UNKNOWN',
+            preview_hash    TEXT,
+            manifest_hash   TEXT,
+            backup_hash     TEXT,
+            policy_version  TEXT DEFAULT '1',
             cwd             TEXT DEFAULT ''
         );
 
@@ -510,12 +531,44 @@ def log_pending_action(action_type: str, command: str, risk_tier: str,
                        suggestion: dict = None, effective_tier: str = None,
                        preview_hash: str = "", manifest_hash: str = "",
                        backup_hash: str = "", session_id: str = "",
-                       tool_use_id: str = "", cwd: str = "") -> int:
+                       tool_use_id: str = "", cwd: str = "",
+                       preview_data: str = None) -> int:
     """
     Idempotently log a MEDIUM/HIGH action as 'pending'.
     Returns the action_id.  If tool_use_id already exists in this session,
     returns the existing action_id without creating a duplicate.
     """
+    command  = _scrub_secrets(command)
+    sugg_json = json.dumps(suggestion) if suggestion else None
+    eff       = effective_tier or risk_tier
+    ts        = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    with _connect() as conn:
+        # Idempotency: check for existing tool_use_id
+        if tool_use_id and session_id:
+            existing = conn.execute(
+                "SELECT id FROM actions WHERE tool_use_id=? AND session_id=? LIMIT 1",
+                (tool_use_id, session_id)
+            ).fetchone()
+            if existing:
+                return existing[0]
+
+        conn.execute("BEGIN")
+        cur = conn.execute("""
+            INSERT INTO actions
+              (timestamp, action_type, command, risk_tier, status, output,
+               suggestion, base_tier, effective_tier, preview_hash, manifest_hash, backup_hash,
+               session_id, tool_use_id, cwd, preview_data)
+            VALUES (?, ?, ?, ?, 'pending', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (ts, action_type, command, risk_tier, sugg_json,
+               risk_tier, eff, preview_hash, manifest_hash, backup_hash, session_id, tool_use_id, cwd, preview_data))
+        action_id = cur.lastrowid
+        _append_event(conn, action_id, "requested",   {"command": command[:200], "cwd": cwd})
+        _append_event(conn, action_id, "classified",  {"base": risk_tier, "effective": eff})
+        _append_event(conn, action_id, "preview_generated", {"preview_hash": preview_hash})
+        _append_event(conn, action_id, "approval_requested")
+        conn.execute("COMMIT")
+    return action_id
     command  = _scrub_secrets(command)
     sugg_json = json.dumps(suggestion) if suggestion else None
     eff       = effective_tier or risk_tier

@@ -132,4 +132,4 @@ def test_dashboard_template_contains_sse_and_browser_notifications(auth_client):
     # Verify deduplication Set
     assert "processedEvents" in html
     # Verify live indicator
-    assert "Live Stream Active" in html
+    assert "LIVE SSE STREAM" in html

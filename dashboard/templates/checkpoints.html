@@ -130,8 +130,30 @@
         </table>
         {% else %}
         <div class="empty-state">
-            No checkpoints saved yet &mdash; checkpoints are generated automatically before risky write, delete, or overwrite actions.
+            No checkpoints saved yet — displaying demo entry.
         </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Saved At</th>
+                    <th>Target File Path</th>
+                    <th>Snapshot Location</th>
+                    <th>Why Saved (Trigger)</th>
+                    <th>Restore Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="timestamp-cell">Demo</td>
+                    <td class="file-cell">checkpoint_demo_test.txt</td>
+                    <td style="font-family: monospace; font-size: 11px; color: var(--text-dim);">Demo Snapshot Path</td>
+                    <td style="color: var(--text-muted);">Original file state saved</td>
+                    <td><button class="restore-btn" disabled>Restore this version</button>
+                    <span style="margin-left:8px;font-size:10px;color:var(--text-muted);">DEMO</span>
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Sample data – no actual snapshot stored.</div></td>
+                </tr>
+            </tbody>
+        </table>
         {% endif %}
     </div>
 </body>

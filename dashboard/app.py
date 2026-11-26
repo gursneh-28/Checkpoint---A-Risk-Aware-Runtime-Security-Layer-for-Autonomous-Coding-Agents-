@@ -176,6 +176,7 @@ def dashboard():
     for row in raw_rows:
         suggestion = json.loads(row[7]) if len(row) > 7 and row[7] else None
         actions.append({
+
             "id": row[0],
             "timestamp": row[1],
             "action_type": row[2],

@@ -1012,7 +1012,7 @@
                 </a>
 
                 <div class="nav-label">Audit & Forensic</div>
-                <a class="nav-item" onclick="switchTab('versions')">
+                <a class="nav-item" href="{{ url_for('checkpoints') }}">
                     <svg class="nav-icon" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
                     Version History
                 </a>
@@ -1102,6 +1102,32 @@
                                 <div class="risk-segment segment-med" style="width: {{ (med_cnt / total_act * 100)|round(1) }}%;"></div>
                                 <div class="risk-segment segment-high" style="width: {{ (high_cnt / total_act * 100)|round(1) }}%;"></div>
                                 <div class="risk-segment segment-crit" style="width: {{ (crit_cnt / total_act * 100)|round(1) }}%;"></div>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                         </div>
 
@@ -1110,21 +1136,125 @@
                                 <div class="legend-name" style="color: var(--risk-low);">LOW RISK</div>
                                 <div class="legend-count">{{ low_cnt }}</div>
                                 <div class="legend-pct">{{ (low_cnt / total_act * 100)|round(0) }}%</div>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                             <div class="legend-item">
                                 <div class="legend-name" style="color: var(--risk-med);">MEDIUM</div>
                                 <div class="legend-count">{{ med_cnt }}</div>
                                 <div class="legend-pct">{{ (med_cnt / total_act * 100)|round(0) }}%</div>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                             <div class="legend-item">
                                 <div class="legend-name" style="color: var(--risk-high);">HIGH RISK</div>
                                 <div class="legend-count">{{ high_cnt }}</div>
                                 <div class="legend-pct">{{ (high_cnt / total_act * 100)|round(0) }}%</div>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                             <div class="legend-item">
                                 <div class="legend-name" style="color: var(--risk-crit);">CRITICAL</div>
                                 <div class="legend-count">{{ crit_cnt }}</div>
                                 <div class="legend-pct">{{ (crit_cnt / total_act * 100)|round(0) }}%</div>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                         </div>
                     </div>
@@ -1138,22 +1268,152 @@
                             <div class="posture-item">
                                 <span class="posture-label">Storage Backend:</span>
                                 <span class="posture-val">SQLite WAL (Workspace Fallback)</span>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                             <div class="posture-item">
                                 <span class="posture-label">OS-Level Isolation:</span>
                                 <span class="posture-val" style="color: #fbbf24;">Disabled (Single User)</span>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                             <div class="posture-item">
                                 <span class="posture-label">Milestone 5 Service:</span>
                                 <span class="posture-val" style="color: var(--text-dim);">CheckpointSvc (Pending Setup)</span>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                             <div class="posture-item">
                                 <span class="posture-label">CRITICAL Approval:</span>
                                 <span class="posture-val" style="color: #fbbf24;">Typed YES (Dev Mode Only)</span>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                             <div class="posture-item">
                                 <span class="posture-label">Audit Log Hash Chain:</span>
                                 <span class="posture-val" style="color: var(--risk-low);">SHA-256 Global Seq Active</span>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                         </div>
                     </div>
@@ -1263,12 +1523,64 @@
                                         {% endif %}
 
                                         <button class="btn-sm btn-secondary" onclick="openFlagModal({{ a.id }}, '{{ a.effective_tier or a.risk_tier }}')">Flag</button>
-                                    </div>
+                                       {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            </div>
                                     {% else %}
                                     <div class="btn-action-group">
                                         <button class="btn-sm btn-secondary" onclick="inspectAction({{ a.id }})">Inspect</button>
                                         <button class="btn-sm btn-secondary" onclick="openFlagModal({{ a.id }}, '{{ a.effective_tier or a.risk_tier }}')">Flag</button>
-                                    </div>
+                                       {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            </div>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -1302,6 +1614,32 @@
                                 <span class="badge risk-{{ p.effective_tier or p.risk_tier }}">{{ p.effective_tier or p.risk_tier }}</span>
                                 <span style="font-size: 15px; font-weight: 700; color: #fff;">Action #{{ p.id }}</span>
                                 <span class="timestamp-text">{{ p.timestamp }}</span>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                             <span class="badge status-pending">Awaiting Decision</span>
                         </div>
@@ -1323,9 +1661,61 @@
                             <div class="typed-confirm-box">
                                 <p>⚠️ <strong>CRITICAL RISK CONFIRMATION:</strong> In development mode, approving a CRITICAL tier operation requires explicit confirmation. Type <code>YES</code> below to approve.</p>
                                 <input type="text" name="typed_confirmation" class="typed-input" placeholder="Type YES to confirm" required autocomplete="off">
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                             <div class="btn-action-group">
                                 <button type="submit" class="btn-sm btn-approve" style="padding: 7px 16px;">Approve Action (CRITICAL)</button>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                         </form>
                         {% else %}
@@ -1383,6 +1773,32 @@
                             <div class="pr-item-top">
                                 <span class="pr-item-id">#{{ a.id }}</span>
                                 <span class="badge risk-{{ a.effective_tier or a.risk_tier }}">{{ a.effective_tier or a.risk_tier }}</span>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                             <div class="pr-item-cmd">{{ a.command }}</div>
                         </div>
@@ -1397,6 +1813,32 @@
                             <div class="pr-title-group">
                                 <h3 id="pr-view-title">Select an action to inspect</h3>
                                 <p id="pr-view-subtitle" style="font-size: 12px; color: var(--text-dim);">Detailed impact preview and security rationale</p>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                             <div id="pr-view-badges"></div>
                         </div>
@@ -1405,14 +1847,92 @@
                             <div class="blast-item">
                                 <div class="blast-label">Target Working Directory</div>
                                 <div class="blast-value" id="pr-view-cwd">&mdash;</div>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                             <div class="blast-item">
                                 <div class="blast-label">Preview SHA-256 Hash</div>
                                 <div class="blast-value" id="pr-view-hash" style="font-family: monospace; font-size: 11px;">&mdash;</div>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                             <div class="blast-item">
                                 <div class="blast-label">Safety Snapshot</div>
                                 <div class="blast-value" id="pr-view-backup">&mdash;</div>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                         </div>
 
@@ -1712,14 +2232,92 @@
                             <div class="posture-item">
                                 <span class="posture-label">Session Key Algorithm:</span>
                                 <span class="posture-val">Argon2id (HMAC-SHA256)</span>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                             <div class="posture-item">
                                 <span class="posture-label">Cookie Protection:</span>
                                 <span class="posture-val">SameSite=Strict &bull; HTTPOnly</span>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                             <div class="posture-item">
                                 <span class="posture-label">Anti-Rebinding Check:</span>
                                 <span class="posture-val">Strict Host & Origin Enforced</span>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                         </div>
                     </div>
@@ -1732,14 +2330,92 @@
                             <div class="posture-item">
                                 <span class="posture-label">Hook Spec:</span>
                                 <span class="posture-val"><code>.agents/hooks.json</code></span>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                             <div class="posture-item">
                                 <span class="posture-label">Interception Adapter:</span>
                                 <span class="posture-val"><code>core/antigravity_adapter.py</code></span>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                             <div class="posture-item">
                                 <span class="posture-label">Default Policy:</span>
                                 <span class="posture-val" style="color: var(--risk-low);">Fail-Closed</span>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                         </div>
                     </div>
@@ -2091,6 +2767,32 @@
                             <div class="btn-action-group">
                                 <button class="btn-sm btn-secondary" onclick="inspectAction(${ev.action_id})">Inspect</button>
                                 <button class="btn-sm btn-secondary" onclick="openFlagModal(${ev.action_id}, '${ev.risk_tier || 'LOW'}')">Flag</button>
+                               {% if action.preview_data %}
+                            <div class="preview-panel" style="margin-top:12px;">
+                                <h4 style="margin:0 0 6px 0;">Command Impact Preview</h4>
+                                <p><strong>{{ action.preview_data.headline }}</strong></p>
+                                {% if action.preview_data.details %}
+                                <ul>
+                                    {% for d in action.preview_data.details %}
+                                    <li>{{ d }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Affected:</em> {{ action.preview_data.affected_summary }}</p>
+                                {% if action.preview_data.effects_summary %}
+                                <ul>
+                                    {% for e in action.preview_data.effects_summary %}
+                                    <li>{{ e }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                <p><em>Limitations:</em> {{ action.preview_data.limitations | join(', ') }}</p>
+                                <p><em>Undo/Recovery:</em> {{ action.preview_data.undo_path }}</p>
+                                {% if action.preview_data.is_unknown %}
+                                <p class="warning" style="color:#f97316;">Preview unknown: {{ action.preview_data.unknown_reason }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             </div>
                         </td>
                     `;
